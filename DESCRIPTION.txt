@@ -1,0 +1,10 @@
+Package: ytvattenkartor-vasterhavet
+Type: Application
+Title: Ytvattenkartor Västerhavet App
+Version: 0.1.0-beta
+Imports:
+    shiny,
+    tidyverse,
+    R.matlab,
+    ggrepel
+    sf
