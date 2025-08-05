@@ -53,17 +53,6 @@ Or click **Run App** in RStudio.
 - Must include columns like `Year`, `Month (calc)`, `Lat`, `Lon`, `Depth`, `Station`, and selected parameters (e.g., `Temp CTD (prio CTD)`).
 - Automatically harmonizes station naming and calculates DIN values.
 
-## 🗺️ Plot Interpretation
-
-- Color-coded anomalies:
-  - 🔴 **Mycket högre än normalt**: `#d73027`
-  - 🟠 **Högre än normalt**: `#fdae61`
-  - 🟦 **Normala värden**: `#91bfdb`
-  - 🔵 **Lägre än normalt**: `#4575b4`
-  - 🟣 **Mycket lägre än normalt**: `#313695`
-  - ⚪ **Ingen provtagning**: `grey70`
-- Anomalies are based on comparison with historical means and standard deviations from `stat_stations.mat`.
-
 ## 📤 Exports
 
 - **PNG**: Download the currently displayed plot.
