@@ -13,9 +13,6 @@ require(sf)
 require(R.matlab)
 require(ggrepel)
 
-# Load helper functions
-source("R/helper.R")
-
 # Define a tibble that maps parameter metadata (ID, full name, short Swedish name)
 parameter_map <- tibble::tibble(
   parameter_id = 1:10,
@@ -49,6 +46,10 @@ anomaly_colors_swe <- c(
 # Swedish month names (used for dropdowns, labels, etc.)
 month_names_sv <- c("Januari", "Februari", "Mars", "April", "Maj", "Juni",
                     "Juli", "Augusti", "September", "Oktober", "November", "December")
+
+
+# Load helper functions
+source("R/helper.R")
 
 # Define UI for application
 ui <- fluidPage(
@@ -226,7 +227,7 @@ server <- function(input, output, session) {
   output$map_plot <- renderPlot({
     df <- data_joined()
     req(nrow(df) > 0)
-    create_plot(df, input)
+    create_plot(df, input, all_anomalies, anomaly_colors_swe, month_names_sv, parameter_map)
   })
   
   # Define the download handler for downloading the current map plot as a PNG image
@@ -237,7 +238,7 @@ server <- function(input, output, session) {
     },
     content = function(file) {
       df <- data_joined()
-      ggsave(file, plot = create_plot(df, input), width = 10, height = 8, dpi = 300, bg = "white")
+      ggsave(file, plot = create_plot(df, input, all_anomalies, anomaly_colors_swe, month_names_sv, parameter_map), width = 10, height = 8, dpi = 300, bg = "white")
     }
   )
   
@@ -319,7 +320,8 @@ server <- function(input, output, session) {
             month = input$month,
             depth = input$depth,
             bbox_option = input$bbox_option
-          )), width = 10, height = 8, dpi = 300, bg = "white")
+          ), all_anomalies, anomaly_colors_swe, month_names_sv, parameter_map)
+          , width = 10, height = 8, dpi = 300, bg = "white")
           
           # Add the file to the list to be zipped
           files <- c(files, file_path)

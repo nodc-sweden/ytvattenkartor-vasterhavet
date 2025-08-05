@@ -26,7 +26,7 @@ assign_pie_fill <- function(value, mean, std, two_std) {
 }
 
 # Function to create a plot
-create_plot <- function(df, input) {
+create_plot <- function(df, input, all_anomalies, anomaly_colors_swe, month_names_sv, parameter_map) {
   # Load spatial data: Swedish west coast polygon and filtered lakes in Sweden
   sw_coast <- st_read("data/EEA_Coastline_Polygon_Shape_Swedish_west_coast/Swedish_West_Coast_WGS84.shp", quiet = TRUE)
   lakes <- st_read("data/ne_10m_lakes/sweden_lakes.shp", quiet = TRUE)
