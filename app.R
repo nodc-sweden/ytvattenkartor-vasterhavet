@@ -63,7 +63,7 @@ ui <- fluidPage(
       numericInput("depth", "Välj djup (m)", value = 0, step = 1),
       hr(),
       selectInput("bbox_option", "Välj kartutbredning", choices = c(
-        "Bohuslän", "Bohuslän och Halland", "Dynamisk"
+        "Bohuslän", "Halland", "Bohuslän och Halland", "Dynamisk"
       ), selected = "Bohuslän och Halland"),
       downloadButton("download_current_png", "Ladda ner aktuell plot (PNG)"),
       br(), br(),

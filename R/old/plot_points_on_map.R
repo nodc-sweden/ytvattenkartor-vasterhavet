@@ -4,7 +4,7 @@ if (interactive()) {
   library(ggrepel)
   
   # Load helper functions
-  source("code/helper.R")
+  source("R/helper.R")
   
   year <- 2025
   month <- 1
@@ -14,8 +14,7 @@ if (interactive()) {
   depth_of_interest <- 0  # e.g., surface water
   
   statistics <- R.matlab::readMat("data/stat_stations.mat")
-  coast <- R.matlab::readMat("data/map_info/bvvf_coast.dat")
-  
+
   # Load stats
   # 1. Station names (fix encoding)
   station_names <- sapply(statistics$alla.stat, function(x) iconv(x[[1]], from = "latin1", to = "UTF-8"))
