@@ -1,6 +1,6 @@
-# Ytvattenkartor för Infocentralen Västerhavet
+# Surface water maps for the Västerhavet Info Centre
 
-This Shiny web application provides interactive mapping and visualization of surface water anomalies in the Västerhavet region, based on data exported from InfoC. The app allows users to upload data, select parameters, and generate customized maps and summary plots based on historical statistics.
+This repository contains a Shiny web application provides interactive mapping and visualization of surface water anomalies in the Västerhavet region, based on data exported from InfoC. The app allows users to upload data, select parameters, and generate customized maps and summary plots based on historical statistics.
 
 ## ✨ Features
 
