@@ -29,7 +29,7 @@ parameter_map <- tibble::tibble(
     "Temperatur", "Salthalt", "Syrekoncentration", "Syremättnad", "H2S", "Fosfatkoncentration", 
     "DIN-koncentration", "Kiselkoncentration", "Klorofyllkoncentration", "Secchidjup"
   ),
-  parameter_depth = c(rep("ytvattnet", 2), "bottenvattnet", rep("ytvattnet", 7))
+  parameter_depth = c(rep(" i ytvattnet", 2), " i bottenvattnet", rep(" i ytvattnet", 6), "")
 )
 
 # Define all Swedish anomaly labels (used for categorizing measurement deviation)
