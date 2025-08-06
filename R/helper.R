@@ -98,8 +98,10 @@ create_plot <- function(df, input, all_anomalies, anomaly_colors_swe, month_name
     labs(
       fill = "Avvikelse från normalvärde",
       color = "Extremvärde",
-      title = parameter_map$parameter_name_short[parameter_map$parameter_name == input$parameter],
-      subtitle = paste0(month_names_sv[as.numeric(input$month)], " ", input$year),
+      title = paste0(parameter_map$parameter_name_plot[parameter_map$parameter_name == input$parameter], " i ", 
+                     parameter_map$parameter_depth[parameter_map$parameter_name == input$parameter], ", ",
+                     paste0(month_names_sv[as.numeric(input$month)], " ", input$year)),
+      subtitle = "Referensperiod 2007–2016",
       x = "Longitud", y = "Latitud"
     ) +
     guides(

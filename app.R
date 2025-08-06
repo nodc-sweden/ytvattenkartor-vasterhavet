@@ -24,7 +24,12 @@ parameter_map <- tibble::tibble(
   parameter_name_short = c(
     "Temperatur", "Salt", "Syre", "Syremättnad", "H2S", "Fosfat", 
     "DIN", "Kisel", "Chla", "Secchi"
-  )
+  ),
+  parameter_name_plot = c(
+    "Temperatur", "Salthalt", "Syrekoncentration", "Syremättnad", "H2S", "Fosfatkoncentration", 
+    "DIN-koncentration", "Kiselkoncentration", "Klorofyllkoncentration", "Secchidjup"
+  ),
+  parameter_depth = c(rep("ytvattnet", 2), "bottenvattnet", rep("ytvattnet", 7))
 )
 
 # Define all Swedish anomaly labels (used for categorizing measurement deviation)
@@ -45,8 +50,8 @@ anomaly_colors_swe <- c(
 )
 
 # Swedish month names (used for dropdowns, labels, etc.)
-month_names_sv <- c("Januari", "Februari", "Mars", "April", "Maj", "Juni",
-                    "Juli", "Augusti", "September", "Oktober", "November", "December")
+month_names_sv <- c("januari", "februari", "mars", "april", "maj", "juni",
+                    "juli", "augusti", "september", "oktober", "november", "december")
 
 
 # Load helper functions
@@ -59,9 +64,17 @@ ui <- fluidPage(
     sidebarPanel(
       fileInput("data_file", "Ladda upp InfoC-export (.txt)", accept = ".txt"),
       uiOutput("year_ui"),
-      selectInput("month", "Välj månad", choices = setNames(1:12, month_names_sv), selected = 1),
-      selectInput("parameter", "Välj parameter", choices = setNames(parameter_map$parameter_name, parameter_map$parameter_name_short), selected = "Temp CTD (prio CTD)"),
-      numericInput("depth", "Välj djup (m)", value = 0, step = 1),
+      selectInput("month", "Välj månad", choices = setNames(1:12, str_to_sentence(month_names_sv)), selected = 1),
+      selectInput(
+        "parameter",
+        "Välj parameter",
+        choices = setNames(
+          parameter_map$parameter_name[-5],
+          parameter_map$parameter_name_short[-5]
+        ),
+        selected = "Temp CTD (prio CTD)"
+      ),
+      # numericInput("depth", "Välj djup (m)", value = 0, step = 1),
       hr(),
       selectInput("bbox_option", "Välj kartutbredning", choices = c(
         "Bohuslän", "Halland", "Bohuslän och Halland", "Dynamisk"
@@ -157,19 +170,8 @@ server <- function(input, output, session) {
     # Ensure the 'Month (calc)' column is numeric (in case it's been read as character)
     data_upload$`Month (calc)` <- as.numeric(data_upload$`Month (calc)`)
     
-    data_upload
-  })
-  
-  # Define a reactive expression that joins uploaded data with statistics for plotting/analyzing
-  data_joined <- reactive({
-    # Retrieve the uploaded dataset
-    data <- uploaded_data()
-    
-    # Ensure all required inputs are available before proceeding
-    req(uploaded_data(), input$year, input$month)
-    
-    # Step 1: Calculate DIN (Dissolved Inorganic Nitrogen) from NO2, NO3, NH4
-    data <- data %>%
+    # Calculate DIN
+    data_upload <- data_upload %>%
       mutate(
         NO2_fix = if_else(is.na(NO2), 0, NO2),
         NO3_fix = if_else(is.na(NO3), 0, NO3),
@@ -177,29 +179,87 @@ server <- function(input, output, session) {
         DIN_raw = NO2_fix + NO3_fix + NH4_fix,
         DIN = if_else(DIN_raw == 0, NA_real_, DIN_raw)
       ) %>%
-      select(-NO2_fix, -NO3_fix, -NH4_fix, -DIN_raw) %>%
+      select(-NO2_fix, -NO3_fix, -NH4_fix, -DIN_raw)
+    
+    data_upload
+  })
+  
+  selected_depths <- reactive({
+    data <- uploaded_data()
+    req(data, input$parameter, input$year, input$month)
+    
+    if (input$parameter == "O2_CTD (prio CTD)") {
+      # Bottom depths
+      data %>%
+        filter(Year == input$year, `Month (calc)` == input$month) %>%
+        filter(!is.na(.data[[input$parameter]])) %>%
+        group_by(Station) %>%
+        slice_max(Depth, with_ties = FALSE) %>%
+        ungroup() %>%
+        transmute(Station = toupper(Station), depth = as.integer(Depth))
+    } else {
+      # Surface depth
+      data %>%
+        filter(Year == input$year, `Month (calc)` == input$month) %>%
+        filter(!is.na(.data[[input$parameter]])) %>%
+        distinct(Station) %>%
+        transmute(Station = toupper(Station), depth = 0L)
+    }
+  })
+  
+  # Define a reactive expression that joins uploaded data with statistics for plotting/analyzing
+  data_joined <- reactive({
+    data <- uploaded_data()
+    req(data, input$year, input$month)
+    
+    data <- data %>%
       filter(Year == input$year, `Month (calc)` == input$month)
     
-    # Step 2: Convert lat/lon from DMM (Degrees + Decimal Minutes) to decimal degrees
     data$lat <- convert_dmm_to_dd(as.numeric(data$Lat))
     data$lon <- convert_dmm_to_dd(as.numeric(data$Lon))
     
-    # Step 3: Retrieve matching statistics for selected parameter and depth
-    stat <- stats() %>%
-      filter(parameter_name == input$parameter, depth == input$depth)
+    # Use selected depths
+    depth_df <- selected_depths()
     
-    # Step 4: Join station data with statistics and calculate anomaly labels
+    # Join depths to data
+    data <- data %>%
+      mutate(Station = toupper(Station)) %>%
+      left_join(depth_df, by = "Station") %>%
+      filter(Depth == depth)
+    
+    # Get stats for the correct parameter
+    stat_param <- stats() %>%
+      filter(parameter_name == input$parameter)
+    
+    # For each station, find the closest depth *below or equal* to sampled depth
+    stat_best_match <- depth_df %>%
+      rowwise() %>%
+      mutate(depth_stat = {
+        possible_depths <- stat_param %>%
+          filter(station == Station) %>%
+          pull(depth)
+        
+        if (length(possible_depths) == 0) {
+          NA_integer_
+        } else if (input$parameter == "O2_CTD (prio CTD)") {
+          max(possible_depths, na.rm = TRUE)
+        } else {
+          0L
+        }
+      }) %>%
+      ungroup()
+    
+    # Now join using the adjusted depth
+    stat <- stat_param %>%
+      inner_join(stat_best_match, by = c("station" = "Station", "depth" = "depth_stat"))
+    
     joined <- data %>%
       filter(!is.na(.data[[input$parameter]])) %>%
-      filter(Depth == input$depth) %>%
       mutate(
-        Station = toupper(Station),
         Month = as.integer(`Month (calc)`),
         depth = as.integer(Depth)
       ) %>%
-      left_join(stat, by = c("Station" = "station", "Month" = "month")) %>%
-      
-      # Step 5: Add classifications and labels
+      left_join(stat, by = c("Station" = "station", "Month" = "month", "depth" = "depth.y")) %>%
       mutate(
         pie_fill = mapply(assign_pie_fill, .data[[input$parameter]], mean, std, `2std`),
         value = .data[[input$parameter]],
@@ -221,7 +281,6 @@ server <- function(input, output, session) {
         combined_label = paste0(Station, "\n", round(value, 2))
       )
     
-    # Return the joined and enriched dataset
     joined
   })
   
@@ -258,39 +317,82 @@ server <- function(input, output, session) {
       
       req(uploaded_data(), input$year, input$month)
       
-      # Iterate over all parameters to generate a map for each one
       for (param in parameter_map$parameter_name) {
+        if (param == "H2S") {
+          next
+        }
+        
         param_short <- parameter_map$parameter_name_short[parameter_map$parameter_name == param]
         
-        stat <- stats() %>%
-          filter(parameter_name == param, depth == input$depth)
+        # Dynamically get depths per station based on current parameter
+        depth_df <- {
+          if (param == "O2_CTD (prio CTD)") {
+            df_orig %>%
+              filter(Year == input$year, `Month (calc)` == input$month) %>%
+              filter(!is.na(.data[[param]])) %>%
+              group_by(Station) %>%
+              slice_max(Depth, with_ties = FALSE) %>%
+              ungroup() %>%
+              transmute(Station = toupper(Station), depth = as.integer(Depth))
+          } else {
+            df_orig %>%
+              filter(Year == input$year, `Month (calc)` == input$month) %>%
+              filter(!is.na(.data[[param]])) %>%
+              distinct(Station) %>%
+              transmute(Station = toupper(Station), depth = 0L)
+          }
+        }
         
-        # Prepare data for plotting: filter for selected year/month and calculate DIN
+        depth_df <- depth_df %>%
+          mutate(Station = toupper(Station))
+        
+        # Prepare data for plotting
         df <- df_orig %>%
-          mutate(
-            NO2_fix = if_else(is.na(NO2), 0, NO2),
-            NO3_fix = if_else(is.na(NO3), 0, NO3),
-            NH4_fix = if_else(is.na(NH4), 0, NH4),
-            DIN_raw = NO2_fix + NO3_fix + NH4_fix,
-            DIN = if_else(DIN_raw == 0, NA_real_, DIN_raw)
-          ) %>%
-          select(-NO2_fix, -NO3_fix, -NH4_fix, -DIN_raw) %>%
-          filter(Year == input$year, `Month (calc)` == input$month)
+          filter(Year == input$year, `Month (calc)` == input$month) %>%
+          mutate(Station = toupper(Station)) %>%
+          left_join(depth_df, by = "Station") %>%
+          filter(Depth == depth)
         
-        # Convert coordinate formats (from degrees + decimal minutes to decimal degrees)
         df$lat <- convert_dmm_to_dd(as.numeric(df$Lat))
         df$lon <- convert_dmm_to_dd(as.numeric(df$Lon))
         
-        # Join the statistics with the filtered data and prepare fields for plotting
+        # Get stats for the correct parameter
+        stat_param <- stats() %>%
+          filter(parameter_name == param) %>%
+          mutate(station = toupper(station))
+        
+        # For each station, find the closest depth *below or equal* to sampled depth
+        stat_best_match <- depth_df %>%
+          rowwise() %>%
+          mutate(depth_stat = {
+            station_depths <- stat_param %>%
+              filter(station == Station) %>%
+              pull(depth)
+            
+            if (length(station_depths) == 0 || all(is.na(station_depths))) {
+              NA_integer_
+            } else if (param == "O2_CTD (prio CTD)") {
+              max(station_depths, na.rm = TRUE)
+            } else {
+              0L
+            }
+          }) %>%
+          ungroup()
+        
+        stat_best_match <- stat_best_match %>%
+          filter(!is.na(depth_stat))
+        
+        # Now join using the adjusted depth
+        stat <- stat_param %>%
+          inner_join(stat_best_match, by = c("station" = "Station", "depth" = "depth_stat"))
+        
         joined <- df %>%
           filter(!is.na(.data[[param]])) %>%
-          filter(Depth == input$depth) %>%
           mutate(
-            Station = toupper(Station),
             Month = as.integer(`Month (calc)`),
             depth = as.integer(Depth)
           ) %>%
-          left_join(stat, by = c("Station" = "station", "Month" = "month")) %>%
+          left_join(stat, by = c("Station" = "station", "Month" = "month", "depth" = "depth.y")) %>%
           mutate(
             pie_fill = mapply(assign_pie_fill, .data[[param]], mean, std, `2std`),
             value = .data[[param]],
@@ -300,7 +402,8 @@ server <- function(input, output, session) {
               value >= mean - std & value <= mean + std ~ "Normala värden",
               value > mean + std & value <= mean + `2std` ~ "Högre än normalt",
               value > mean + `2std` ~ "Mycket högre än normalt",
-              is.na(value) ~ "Ingen provtagning"
+              is.na(mean) ~ "Saknar historiska värden",
+              TRUE ~ "Ingen provtagning"
             ),
             anomaly_swe = factor(anomaly_swe, levels = all_anomalies),
             extreme = factor(case_when(
@@ -311,26 +414,22 @@ server <- function(input, output, session) {
             combined_label = paste0(Station, "\n", round(value, 2))
           )
         
-        # Only create a plot if data exists for the current parameter
         if (nrow(joined) > 0) {
           file_path <- file.path(temp_dir, paste0(make.names(param_short), "_", input$year, "_", input$month, ".png"))
           
-          # Save the plot to the temporary file
           ggsave(file_path, plot = create_plot(joined, list(
             parameter = param,
             year = input$year,
             month = input$month,
-            depth = input$depth,
+            depth = NA,  # not used in this case
             bbox_option = input$bbox_option
-          ), all_anomalies, anomaly_colors_swe, month_names_sv, parameter_map)
-          , width = 10, height = 8, dpi = 300, bg = "white")
+          ), all_anomalies, anomaly_colors_swe, month_names_sv, parameter_map),
+          width = 10, height = 8, dpi = 300, bg = "white")
           
-          # Add the file to the list to be zipped
           files <- c(files, file_path)
         }
       }
       
-      # Zip all generated PNG files into a single .zip file
       utils::zip(zipfile, files = files, flags = "-j")  # -j = junk paths
     }
   )
