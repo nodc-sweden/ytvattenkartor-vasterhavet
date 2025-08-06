@@ -297,6 +297,7 @@ server <- function(input, output, session) {
   output$download_current_png <- downloadHandler(
     filename = function() {
       param_short <- parameter_map$parameter_name_short[parameter_map$parameter_name == input$parameter]
+      param_short <- gsub("ä", "", param_short)
       paste0(param_short, "_", input$year, "_", input$month, ".png")
     },
     content = function(file) {
@@ -417,7 +418,7 @@ server <- function(input, output, session) {
           )
         
         if (nrow(joined) > 0) {
-          file_path <- file.path(temp_dir, paste0(make.names(param_short), "_", input$year, "_", input$month, ".png"))
+          file_path <- file.path(temp_dir, paste0(make.names(gsub("ä", "", param_short)), "_", input$year, "_", input$month, ".png"))
           
           ggsave(file_path, plot = create_plot(joined, list(
             parameter = param,
