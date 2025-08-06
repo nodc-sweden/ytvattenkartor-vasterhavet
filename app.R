@@ -165,8 +165,9 @@ server <- function(input, output, session) {
     data_upload <- read_tsv(input$data_file$datapath, locale = locale(encoding = "ISO-8859-1"), col_types = cols(), 
                             progress = FALSE, name_repair = "unique_quiet")
     
-    # Rename specific station for consistency with plotting/statistical datasets
+    # Rename specific stations for consistency with plotting/statistical datasets
     data_upload$Station[data_upload$Station == "KOSTERFJORDEN"] <- "KOSTERFJORDEN (NR16)"
+    data_upload$Station[data_upload$Station == "N7 OST NIDINGEN SLA 0-10"] <- "N7 OST NIDINGEN"
     
     # Ensure the 'Month (calc)' column is numeric (in case it's been read as character)
     data_upload$`Month (calc)` <- as.numeric(data_upload$`Month (calc)`)
@@ -238,6 +239,8 @@ server <- function(input, output, session) {
       mutate(depth_stat = {
         possible_depths <- stat_param %>%
           filter(station == Station) %>%
+          filter(!is.na(mean)) %>%
+          filter(month == input$month) %>%
           pull(depth)
         
         if (length(possible_depths) == 0) {
@@ -379,6 +382,8 @@ server <- function(input, output, session) {
           mutate(depth_stat = {
             station_depths <- stat_param %>%
               filter(station == Station) %>%
+              filter(!is.na(mean)) %>%
+              filter(month == input$month) %>%
               pull(depth)
             
             if (length(station_depths) == 0 || all(is.na(station_depths))) {
