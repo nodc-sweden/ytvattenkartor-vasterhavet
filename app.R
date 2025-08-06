@@ -69,10 +69,10 @@ ui <- fluidPage(
         "parameter",
         "Välj parameter",
         choices = setNames(
-          parameter_map$parameter_name[-5],
-          parameter_map$parameter_name_short[-5]
+          parameter_map$parameter_name[-5][order(parameter_map$parameter_name_short[-5])],
+          sort(parameter_map$parameter_name_short[-5])
         ),
-        selected = "Temp CTD (prio CTD)"
+        selected = "Chla"
       ),
       # numericInput("depth", "Välj djup (m)", value = 0, step = 1),
       hr(),
@@ -288,9 +288,19 @@ server <- function(input, output, session) {
   
   # Define the reactive output for rendering the map plot
   output$map_plot <- renderPlot({
-    df <- data_joined()
-    req(nrow(df) > 0)
-    create_plot(df, input, all_anomalies, anomaly_colors_swe, month_names_sv, parameter_map)
+    df <- tryCatch({
+      data_joined()
+    }, error = function(e) {
+      return(NULL)
+    })
+    
+    if (is.null(df) || nrow(df) == 0) {
+      ggplot() +
+        annotate("text", x = 0.5, y = 0.5, label = "Ingen data tillgänglig för vald parameter, månad och år.", size = 6, hjust = 0.5) +
+        theme_void()
+    } else {
+      create_plot(df, input, all_anomalies, anomaly_colors_swe, month_names_sv, parameter_map)
+    }
   })
   
   # Define the download handler for downloading the current map plot as a PNG image
@@ -321,50 +331,49 @@ server <- function(input, output, session) {
       req(uploaded_data(), input$year, input$month)
       
       for (param in parameter_map$parameter_name) {
-        if (param == "H2S") {
-          next
-        }
+        if (param == "H2S") next
         
         param_short <- parameter_map$parameter_name_short[parameter_map$parameter_name == param]
         
-        # Dynamically get depths per station based on current parameter
-        depth_df <- {
-          if (param == "O2_CTD (prio CTD)") {
-            df_orig %>%
-              filter(Year == input$year, `Month (calc)` == input$month) %>%
-              filter(!is.na(.data[[param]])) %>%
-              group_by(Station) %>%
-              slice_max(Depth, with_ties = FALSE) %>%
-              ungroup() %>%
-              transmute(Station = toupper(Station), depth = as.integer(Depth))
-          } else {
-            df_orig %>%
-              filter(Year == input$year, `Month (calc)` == input$month) %>%
-              filter(!is.na(.data[[param]])) %>%
-              distinct(Station) %>%
-              transmute(Station = toupper(Station), depth = 0L)
-          }
+        df_filtered <- df_orig %>%
+          filter(Year == input$year, `Month (calc)` == input$month)
+        
+        # Skip this parameter if there's no data at all for it
+        if (all(is.na(df_filtered[[param]]))) next
+        
+        # Get depth info
+        depth_df <- if (param == "O2_CTD (prio CTD)") {
+          df_filtered %>%
+            filter(!is.na(.data[[param]])) %>%
+            group_by(Station) %>%
+            slice_max(Depth, with_ties = FALSE) %>%
+            ungroup() %>%
+            transmute(Station = toupper(Station), depth = as.integer(Depth))
+        } else {
+          df_filtered %>%
+            filter(!is.na(.data[[param]])) %>%
+            distinct(Station) %>%
+            transmute(Station = toupper(Station), depth = 0L)
         }
         
-        depth_df <- depth_df %>%
-          mutate(Station = toupper(Station))
+        if (nrow(depth_df) == 0) next  # No usable stations
         
-        # Prepare data for plotting
-        df <- df_orig %>%
-          filter(Year == input$year, `Month (calc)` == input$month) %>%
+        df <- df_filtered %>%
           mutate(Station = toupper(Station)) %>%
           left_join(depth_df, by = "Station") %>%
           filter(Depth == depth)
         
+        if (nrow(df) == 0) next  # No matching depths
+        
         df$lat <- convert_dmm_to_dd(as.numeric(df$Lat))
         df$lon <- convert_dmm_to_dd(as.numeric(df$Lon))
         
-        # Get stats for the correct parameter
         stat_param <- stats() %>%
           filter(parameter_name == param) %>%
           mutate(station = toupper(station))
         
-        # For each station, find the closest depth *below or equal* to sampled depth
+        if (nrow(stat_param) == 0) next
+        
         stat_best_match <- depth_df %>%
           rowwise() %>%
           mutate(depth_stat = {
@@ -380,12 +389,11 @@ server <- function(input, output, session) {
               0L
             }
           }) %>%
-          ungroup()
-        
-        stat_best_match <- stat_best_match %>%
+          ungroup() %>%
           filter(!is.na(depth_stat))
         
-        # Now join using the adjusted depth
+        if (nrow(stat_best_match) == 0) next
+        
         stat <- stat_param %>%
           inner_join(stat_best_match, by = c("station" = "Station", "depth" = "depth_stat"))
         
@@ -417,20 +425,31 @@ server <- function(input, output, session) {
             combined_label = paste0(Station, "\n", round(value, 2))
           )
         
-        if (nrow(joined) > 0) {
-          file_path <- file.path(temp_dir, paste0(make.names(gsub("ä", "", param_short)), "_", input$year, "_", input$month, ".png"))
-          
-          ggsave(file_path, plot = create_plot(joined, list(
-            parameter = param,
-            year = input$year,
-            month = input$month,
-            depth = NA,  # not used in this case
-            bbox_option = input$bbox_option
-          ), all_anomalies, anomaly_colors_swe, month_names_sv, parameter_map),
-          width = input$plot_width / 2.54, height = input$plot_height / 2.54, dpi = 300, bg = "white")
-          
+        # Skip this plot if there's still no joined data
+        if (nrow(joined) == 0) next
+        
+        file_path <- file.path(
+          temp_dir,
+          paste0(make.names(gsub("ä", "", param_short)), "_", input$year, "_", input$month, ".png")
+        )
+        
+        try({
+          ggsave(
+            file_path,
+            plot = create_plot(joined, list(
+              parameter = param,
+              year = input$year,
+              month = input$month,
+              depth = NA,
+              bbox_option = input$bbox_option
+            ), all_anomalies, anomaly_colors_swe, month_names_sv, parameter_map),
+            width = input$plot_width / 2.54,
+            height = input$plot_height / 2.54,
+            dpi = 300,
+            bg = "white"
+          )
           files <- c(files, file_path)
-        }
+        }, silent = TRUE)
       }
       
       utils::zip(zipfile, files = files, flags = "-j")  # -j = junk paths
