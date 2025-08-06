@@ -48,6 +48,8 @@ create_plot <- function(df, input, all_anomalies, anomaly_colors_swe, month_name
     bbox <- st_bbox(c(xmin = 11.10333, ymin = 57.55000, xmax = 11.90667, ymax = 58.86833), crs = st_crs(4326))
   } else if (input$bbox_option == "Bohuslän och Halland") {
     bbox <- st_bbox(c(xmin = 11.10333, ymin = 56.56500, xmax = 12.72000, ymax = 58.86833), crs = st_crs(4326))
+  } else if (input$bbox_option == "Halland") {
+    bbox <- st_bbox(c(xmin = 11.98833, ymin = 56.56500, xmax = 12.72000, ymax = 57.40667), crs = st_crs(4326))
   }
   
   # Add dummy entries for full legend rendering of anomalies
