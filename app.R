@@ -79,9 +79,11 @@ ui <- fluidPage(
       selectInput("bbox_option", "Välj kartutbredning", choices = c(
         "Bohuslän", "Halland", "Bohuslän och Halland", "Dynamisk"
       ), selected = "Bohuslän och Halland"),
+      numericInput("plot_width", "Plotbredd, nedladdning (cm)", value = 15, min = 5, max = 100, step = 1),
+      numericInput("plot_height", "Plothöjd, nedladdning (cm)", value = 20, min = 5, max = 100, step = 1),
       downloadButton("download_current_png", "Ladda ner aktuell plot (PNG)"),
       br(), br(),
-      downloadButton("download_all_plots_zip", "Ladda ner alla parametrar (ZIP)")
+      downloadButton("download_all_plots_zip", "Ladda ner plottar för alla parametrar (ZIP)")
     ),
     mainPanel(
       plotOutput("map_plot", height = "800px")
@@ -299,7 +301,7 @@ server <- function(input, output, session) {
     },
     content = function(file) {
       df <- data_joined()
-      ggsave(file, plot = create_plot(df, input, all_anomalies, anomaly_colors_swe, month_names_sv, parameter_map), width = 10, height = 8, dpi = 300, bg = "white")
+      ggsave(file, plot = create_plot(df, input, all_anomalies, anomaly_colors_swe, month_names_sv, parameter_map), width = input$plot_width / 2.54, height = input$plot_height / 2.54, dpi = 300, bg = "white")
     }
   )
   
@@ -424,7 +426,7 @@ server <- function(input, output, session) {
             depth = NA,  # not used in this case
             bbox_option = input$bbox_option
           ), all_anomalies, anomaly_colors_swe, month_names_sv, parameter_map),
-          width = 10, height = 8, dpi = 300, bg = "white")
+          width = input$plot_width / 2.54, height = input$plot_height / 2.54, dpi = 300, bg = "white")
           
           files <- c(files, file_path)
         }
