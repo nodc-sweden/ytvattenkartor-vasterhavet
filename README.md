@@ -8,14 +8,16 @@ This repository contains a Shiny web application provides interactive mapping an
 - Dynamic selection of:
   - Year and month
   - Water quality parameters (e.g., Temperature, Salinity, Oxygen, etc.)
-  - Depth
   - Geographic extent (Bohuslän, Halland, or dynamic)
 - Automatically calculates DIN from NO₂, NO₃, and NH₄
 - Compares measurements to historical statistics
+- Uses values from specific depths:
+  - **Surface values (0 m)** are used for all parameters except for **oxygen concentration**
+  - **Bottom values** are used for **oxygen concentration** to capture deep-water conditions
 - Categorizes anomalies (e.g., "Högre än normalt", "Lägre än normalt")
 - Downloads:
   - Current plot as PNG
-  - All parameter plots as a ZIP archive
+  - All parameter plots for the current month as a ZIP archive
 
 ## 📦 Installation
 
