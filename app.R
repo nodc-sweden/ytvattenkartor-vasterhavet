@@ -275,10 +275,12 @@ server <- function(input, output, session) {
           is.na(mean) ~ "Saknar historiska värden"
         ),
         anomaly_swe = factor(anomaly_swe, levels = all_anomalies),
+        # Determine if a value is extreme (outside historical min/max)
+        # Only flag as extreme if also classified as "Mycket högre/lägre än normalt"
         extreme = factor(case_when(
-          value < min ~ "Över/under max/min",
-          value > max ~ "Över/under max/min",
-          TRUE        ~ "Inom historiskt intervall"
+          (value < min & anomaly_swe == "Mycket lägre än normalt") |
+            (value > max & anomaly_swe == "Mycket högre än normalt") ~ "Över/under max/min",
+          TRUE ~ "Inom historiskt intervall"
         ), levels = c("Inom historiskt intervall", "Över/under max/min")),
         combined_label = paste0(Station, "\n", round(value, 2))
       )
@@ -417,10 +419,12 @@ server <- function(input, output, session) {
               TRUE ~ "Ingen provtagning"
             ),
             anomaly_swe = factor(anomaly_swe, levels = all_anomalies),
+            # Determine if a value is extreme (outside historical min/max)
+            # Only flag as extreme if also classified as "Mycket högre/lägre än normalt"
             extreme = factor(case_when(
-              value < min ~ "Över/under max/min",
-              value > max ~ "Över/under max/min",
-              TRUE        ~ "Inom historiskt intervall"
+              (value < min & anomaly_swe == "Mycket lägre än normalt") |
+                (value > max & anomaly_swe == "Mycket högre än normalt") ~ "Över/under max/min",
+              TRUE ~ "Inom historiskt intervall"
             ), levels = c("Inom historiskt intervall", "Över/under max/min")),
             combined_label = paste0(Station, "\n", round(value, 2))
           )
