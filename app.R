@@ -30,17 +30,18 @@ parameter_map <- tibble::tibble(
 # Define all Swedish anomaly labels (used for categorizing measurement deviation)
 all_anomalies <- c(
   "Mycket högre än normalt", "Högre än normalt", "Normala värden",
-  "Lägre än normalt", "Mycket lägre än normalt", "Ingen provtagning"
+  "Lägre än normalt", "Mycket lägre än normalt", "Ingen provtagning", "Saknar historiska värden"
 )
 
 # Define color codes for each anomaly level (used in maps and plots)
 anomaly_colors_swe <- c(
   "Mycket högre än normalt" = "#d73027",
   "Högre än normalt" = "#fdae61",
-  "Normala värden" = "#91bfdb",
-  "Lägre än normalt" = "#4575b4",
+  "Normala värden" = "#66bd63",
+  "Lägre än normalt" = "#91bfdb",
   "Mycket lägre än normalt" = "#313695",
-  "Ingen provtagning" = "grey70"
+  "Ingen provtagning" = "grey70",
+  "Saknar historiska värden" = "white"
 )
 
 # Swedish month names (used for dropdowns, labels, etc.)
@@ -208,7 +209,8 @@ server <- function(input, output, session) {
           value >= mean - std & value <= mean + std ~ "Normala värden",
           value > mean + std & value <= mean + `2std` ~ "Högre än normalt",
           value > mean + `2std` ~ "Mycket högre än normalt",
-          is.na(value) ~ "Ingen provtagning"
+          is.na(value) & !is.na(mean) ~ "Ingen provtagning",
+          is.na(mean) ~ "Saknar historiska värden"
         ),
         anomaly_swe = factor(anomaly_swe, levels = all_anomalies),
         extreme = factor(case_when(
