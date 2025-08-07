@@ -21,6 +21,8 @@ This repository contains a Shiny web application provides interactive mapping an
   - All parameter plots for the current month as a ZIP archive
   - Monthly reports as a PDF
 
+### Screenshot
+
 ![Screenshot of the app](assets/screenshot.png)
 
 ## 📦 Installation
