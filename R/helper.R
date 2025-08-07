@@ -96,7 +96,7 @@ create_plot <- function(df, input, all_anomalies, anomaly_colors_swe, month_name
       plot.subtitle = element_text(size = 12)
     ) +
     labs(
-      fill = "Avvikelse från normalvärde",
+      fill = "Avvikelse från referensvärde",
       color = "Extremvärde",
       title = paste0(parameter_map$parameter_name_plot[parameter_map$parameter_name == input$parameter], 
                      parameter_map$parameter_depth[parameter_map$parameter_name == input$parameter], ", ",
