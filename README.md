@@ -43,7 +43,7 @@ shiny::runApp()
 
 Or click **Run App** in RStudio.
 
-## 🚢 Automatic Deployment
+## 🚢 Deployment
 
 This repository uses **GitHub Actions** to automatically deploy the latest version of the app from the `main` branch to [shinyapps.io](https://nodc-sweden.shinyapps.io/ytvattenkartor/). The deployment is configured in the [`.github/workflows/shinyapps.yaml`](.github/workflows/shinyapps.yaml) file. 
 
@@ -72,13 +72,14 @@ Deployment credentials are stored securely in GitHub repository secrets:
 │   └── helper.R             # Contains helper functions like create_plot(), assign_pie_fill(), etc.
 ├── data/
 │   └── stat_stations.mat    # MATLAB file with historical station statistics
+├── scripts/                 # Misc scripts not directly used by app
 ├── app.R # Main Shiny app file
 └── README.md
 ```
 
 ## 📄 Data Requirements
 
-- **Uploaded file**: Export from InfoC in `.txt` format (tab-separated), encoded in ISO-8859-1.
+- **Uploaded file**: Export from InfoC in `.txt` format (tab-separated), encoded in ISO-8859-1 (latin1).
 - Must include columns like `Year`, `Month (calc)`, `Lat`, `Lon`, `Depth`, `Station`, and selected parameters (e.g., `Temp CTD (prio CTD)`).
 - Automatically harmonizes station naming and calculates DIN values.
 
