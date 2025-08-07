@@ -74,8 +74,11 @@ You can adjust:
 
 ## 🧪 Dependencies
 
+### SHARKtoolbox
+
 **SHARKtoolbox** is required to create the infoC export `.txt` file from LIMS exports.
 
+### R packages
 - `shiny`
 - `dplyr`
 - `ggplot2`
