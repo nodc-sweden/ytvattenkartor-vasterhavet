@@ -7,11 +7,22 @@
 #    https://shiny.posit.co/
 #
 
-require(shiny)
-require(tidyverse)
-require(sf)
-require(R.matlab)
-require(ggrepel)
+library(shiny)
+library(dplyr)
+library(ggplot2)
+library(stringr)
+library(readr)
+library(purrr)
+library(tibble)
+library(sf)
+library(R.matlab)
+library(ggrepel)
+library(png)
+library(jpeg)
+library(tiff)
+library(grid)
+library(gridExtra)
+library(ggpubr)
 
 # Define a tibble that maps parameter metadata (ID, full name, short Swedish name)
 parameter_map <- tibble::tibble(
@@ -26,7 +37,7 @@ parameter_map <- tibble::tibble(
     "DIN", "Kisel", "Chla", "Secchi"
   ),
   parameter_name_plot = c(
-    "Temperatur", "Salthalt", "Syrekoncentration", "Syremättnad", "H2S", "Fosfatkoncentration", 
+    "Temperatur", "Salthalt", "Syrgaskoncentration", "Syremättnad", "H2S", "Fosfatkoncentration", 
     "DIN-koncentration", "Kiselkoncentration", "Klorofyllkoncentration", "Secchidjup"
   ),
   parameter_depth = c(rep(" i ytvattnet", 2), " i bottenvattnet", rep(" i ytvattnet", 6), "")
@@ -73,7 +84,6 @@ ui <- fluidPage(
         ),
         selected = "Chla"
       ),
-      # numericInput("depth", "Välj djup (m)", value = 0, step = 1),
       hr(),
       selectInput("bbox_option", "Välj kartutbredning", choices = c(
         "Bohuslän", "Halland", "Bohuslän och Halland", "Dynamisk"
@@ -82,10 +92,12 @@ ui <- fluidPage(
       numericInput("plot_height", "Plothöjd, nedladdning (cm)", value = 20, min = 5, max = 100, step = 1),
       downloadButton("download_current_png", "Ladda ner aktuell plot (PNG)"),
       br(), br(),
-      downloadButton("download_all_plots_zip", "Ladda ner plottar för alla parametrar (ZIP)")
-    ),
+      downloadButton("download_all_plots_zip", "Ladda ner plottar för alla parametrar (ZIP)"),
+      br(), br(),
+      downloadButton("download_all_plots_pdf", "Ladda ner månadsrapport (PDF)"),
+    width = 2),
     mainPanel(
-      plotOutput("map_plot", height = "800px")
+      plotOutput("map_plot", height = "1000px")
     )
   )
 )
@@ -304,7 +316,7 @@ server <- function(input, output, session) {
     } else {
       create_plot(df, input, all_anomalies, anomaly_colors_swe, month_names_sv, parameter_map)
     }
-  })
+  }, res = 120)
   
   # Define the download handler for downloading the current map plot as a PNG image
   output$download_current_png <- downloadHandler(
@@ -459,6 +471,205 @@ server <- function(input, output, session) {
       }
       
       utils::zip(zipfile, files = files, flags = "-j")  # -j = junk paths
+    }
+  )
+  
+  output$download_all_plots_pdf <- downloadHandler(
+    filename = function() {
+      paste0("plots_", input$year, "_", input$month, ".pdf")
+    },
+    content = function(pdf_file) {
+      df_orig <- uploaded_data()
+      temp_dir <- tempdir()
+      plots <- list()
+      
+      logo_paths <- c(
+        "assets/SMHI logotype svart RGB 52 mm.jpg",
+        "assets/logo BVVF.tif",  # This will be 50% smaller
+        "assets/Länsstyrelsen i färg_liggande.jpg"
+      )
+      
+      # Function to read image and set custom height
+      read_image_as_grob <- function(path, height_inches = 1) {
+        ext <- tools::file_ext(path)
+        img <- switch(
+          tolower(ext),
+          "png"  = png::readPNG(path),
+          "jpg"  = jpeg::readJPEG(path),
+          "jpeg" = jpeg::readJPEG(path),
+          "tif"  = tiff::readTIFF(path),
+          "tiff" = tiff::readTIFF(path),
+          stop(paste("Unsupported format:", ext))
+        )
+        rasterGrob(img, interpolate = TRUE, height = unit(height_inches, "inches"))
+      }
+      
+      # Heights for logos
+      logo_heights <- c(1, 1, 2)
+      logos <- mapply(read_image_as_grob, logo_paths, logo_heights, SIMPLIFY = FALSE)
+      
+      # Spacers between logos
+      spacer <- nullGrob()
+      spacer_height <- 0.3
+      
+      # Interleave logos and spacers
+      stack_grobs <- list(
+        logos[[1]], spacer, spacer,
+        logos[[2]], spacer,
+        logos[[3]]
+      )
+      
+      stack_heights <- unit(c(
+        logo_heights[1], spacer_height, spacer_height,
+        logo_heights[2], spacer_height,
+        logo_heights[3]
+      ), "inches")
+      
+      # Combine into a vertical stack
+      logo_stack <- arrangeGrob(
+        grobs = stack_grobs,
+        ncol = 1,
+        heights = stack_heights
+      )
+      
+      title_text <- paste0("Ytvattenkartor västerhavet, ", month_names_sv[as.integer(input$month)], " ", input$year)
+      
+      # Center vertically and horizontally
+      logo_page <- ggplot() +
+        theme_void() +
+        ggtitle(title_text) +
+        theme(
+          plot.title = element_text(hjust = 0.5, size = 16, face = "bold", margin = margin(b = 10)),
+          plot.margin = unit(c(1, 1, 1, 1), "cm")  # add page margins
+        ) +
+        annotation_custom(
+          grob = logo_stack,
+          xmin = -Inf, xmax = Inf,
+          ymin = 0.35, ymax = 0.5  # lower to make space for title
+        )
+      
+      # Add logo page to beginning of PDF
+      plots[[length(plots) + 1]] <- logo_page
+      
+      for (param in parameter_map$parameter_name) {
+        if (param == "H2S") next
+        
+        param_short <- parameter_map$parameter_name_short[parameter_map$parameter_name == param]
+        
+        df_filtered <- df_orig %>%
+          filter(Year == input$year, `Month (calc)` == input$month)
+        
+        if (all(is.na(df_filtered[[param]]))) next
+        
+        depth_df <- if (param == "O2_CTD (prio CTD)") {
+          df_filtered %>%
+            filter(!is.na(.data[[param]])) %>%
+            group_by(Station) %>%
+            slice_max(Depth, with_ties = FALSE) %>%
+            ungroup() %>%
+            transmute(Station = toupper(Station), depth = as.integer(Depth))
+        } else {
+          df_filtered %>%
+            filter(!is.na(.data[[param]])) %>%
+            distinct(Station) %>%
+            transmute(Station = toupper(Station), depth = 0L)
+        }
+        
+        if (nrow(depth_df) == 0) next
+        
+        df <- df_filtered %>%
+          mutate(Station = toupper(Station)) %>%
+          left_join(depth_df, by = "Station") %>%
+          filter(Depth == depth)
+        
+        if (nrow(df) == 0) next
+        
+        df$lat <- convert_dmm_to_dd(as.numeric(df$Lat))
+        df$lon <- convert_dmm_to_dd(as.numeric(df$Lon))
+        
+        stat_param <- stats() %>%
+          filter(parameter_name == param) %>%
+          mutate(station = toupper(station))
+        
+        if (nrow(stat_param) == 0) next
+        
+        stat_best_match <- depth_df %>%
+          rowwise() %>%
+          mutate(depth_stat = {
+            station_depths <- stat_param %>%
+              filter(station == Station) %>%
+              filter(!is.na(mean)) %>%
+              filter(month == input$month) %>%
+              pull(depth)
+            
+            if (length(station_depths) == 0 || all(is.na(station_depths))) {
+              NA_integer_
+            } else if (param == "O2_CTD (prio CTD)") {
+              max(station_depths, na.rm = TRUE)
+            } else {
+              0L
+            }
+          }) %>%
+          ungroup() %>%
+          filter(!is.na(depth_stat))
+        
+        if (nrow(stat_best_match) == 0) next
+        
+        stat <- stat_param %>%
+          inner_join(stat_best_match, by = c("station" = "Station", "depth" = "depth_stat"))
+        
+        joined <- df %>%
+          filter(!is.na(.data[[param]])) %>%
+          mutate(
+            Month = as.integer(`Month (calc)`),
+            depth = as.integer(Depth)
+          ) %>%
+          left_join(stat, by = c("Station" = "station", "Month" = "month", "depth" = "depth.y")) %>%
+          mutate(
+            pie_fill = mapply(assign_pie_fill, .data[[param]], mean, std, `2std`),
+            value = .data[[param]],
+            anomaly_swe = case_when(
+              value < mean - `2std` ~ "Mycket lägre än normalt",
+              value >= mean - `2std` & value < mean - std ~ "Lägre än normalt",
+              value >= mean - std & value <= mean + std ~ "Normala värden",
+              value > mean + std & value <= mean + `2std` ~ "Högre än normalt",
+              value > mean + `2std` ~ "Mycket högre än normalt",
+              is.na(mean) ~ "Saknar historiska värden"
+            ),
+            anomaly_swe = factor(anomaly_swe, levels = all_anomalies),
+            extreme = factor(case_when(
+              (value < min & anomaly_swe == "Mycket lägre än normalt") |
+                (value > max & anomaly_swe == "Mycket högre än normalt") ~ "Över/under max/min",
+              TRUE ~ "Inom historiskt intervall"
+            ), levels = c("Inom historiskt intervall", "Över/under max/min")),
+            combined_label = paste0(Station, "\n", round(value, 2))
+          )
+        
+        if (nrow(joined) == 0) next
+        
+        plot <- create_plot(joined, list(
+          parameter = param,
+          year = input$year,
+          month = input$month,
+          depth = NA,
+          bbox_option = input$bbox_option
+        ), all_anomalies, anomaly_colors_swe, month_names_sv, parameter_map)
+        
+        add_margin <- function(p, margin_cm = 1) {
+          p + theme(plot.margin = unit(rep(margin_cm, 4), "cm"))
+        }
+        
+        plots[[length(plots)+1]] <- add_margin(plot, margin_cm = 2)
+      }
+      
+      # Save all plots to one PDF
+      if (length(plots) > 0) {
+        pdf(pdf_file, width = 8.27, height = 11.69, onefile = TRUE)
+        for (p in plots) print(p)
+        dev.off()
+      } else {
+        stop("Inga plottar tillgängliga för PDF-export.")
+      }
     }
   )
 }

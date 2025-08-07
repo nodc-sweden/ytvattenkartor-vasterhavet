@@ -1,15 +1,16 @@
 # Surface water maps for the Västerhavet Info Centre
 
-This repository contains a Shiny web application provides interactive mapping and visualization of surface water anomalies in the Västerhavet region, based on data exported from InfoC. The app allows users to upload data, select parameters, and generate customized maps and summary plots based on historical statistics.
+This repository contains a Shiny web application provides interactive mapping and visualization of surface water anomalies in the Västerhavet region, based on data exported for InfoC. The app allows users to upload data, select parameters, and generate customized maps and summary plots based on historical statistics.
 
 ## ✨ Features
 
-- Upload `.txt` files from InfoC export
+- Upload `.txt` files from a InfoC export from **SHARKtoolbox**
 - Dynamic selection of:
   - Year and month
   - Water quality parameters (e.g., Temperature, Salinity, Oxygen, etc.)
-  - Geographic extent (Bohuslän, Halland, or dynamic)
-- Automatically calculates DIN from NO₂, NO₃, and NH₄
+  - Geographic extent (Bohuslän, Halland, Bohuslän + Halland or dynamic based on available coordinates)
+  - Plot size
+- Calculates DIN from NO₂, NO₃, and NH₄
 - Compares measurements to historical statistics
 - Uses values from specific depths:
   - **Surface values (0 m)** are used for all parameters except for **oxygen concentration**
@@ -18,6 +19,9 @@ This repository contains a Shiny web application provides interactive mapping an
 - Downloads:
   - Current plot as PNG
   - All parameter plots for the current month as a ZIP archive
+  - Monthly reports as a PDF
+
+![Screenshot of the app](assets/screenshot.png)
 
 ## 📦 Installation
 
@@ -59,6 +63,7 @@ Or click **Run App** in RStudio.
 
 - **PNG**: Download the currently displayed plot.
 - **ZIP**: Download all parameter plots for the selected year and month.
+- **PDF**: Download all parameter plots for the selected year and month in a PDF, including a logo page.
 
 ## 🔧 Customization
 
