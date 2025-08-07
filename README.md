@@ -1,6 +1,6 @@
 # Surface water maps for the Västerhavet Info Centre
 
-This repository contains a Shiny web application provides interactive mapping and visualization of surface water anomalies in the Västerhavet region, based on data exported for InfoC. The app allows users to upload data, select parameters, and generate customized maps and summary plots based on historical statistics.
+This repository contains a [Shiny web application](https://nodc-sweden.shinyapps.io/ytvattenkartor/) provides interactive mapping and visualization of surface water anomalies in the Västerhavet region, based on data exported for InfoC. The app allows users to upload data, select parameters, and generate customized maps and summary plots based on historical statistics.
 
 ## ✨ Features
 
@@ -42,6 +42,27 @@ shiny::runApp()
 ```
 
 Or click **Run App** in RStudio.
+
+## 🚢 Automatic Deployment
+
+This repository uses **GitHub Actions** to automatically deploy the latest version of the app from the `main` branch to [shinyapps.io](https://nodc-sweden.shinyapps.io/ytvattenkartor/). The deployment is configured in the [`.github/workflows/shinyapps.yaml`](.github/workflows/shinyapps.yaml) file. 
+
+### 🔁 Workflow Overview
+
+Whenever changes are pushed to the `main` branch or a pull request is merged into `main`, the following happens:
+
+1. The GitHub Actions workflow is triggered.
+2. The R environment is set up using the version specified in the workflow.
+3. Dependencies are installed using the `renv.lock` file.
+4. The app is deployed to shinyapps.io using the `rsconnect` package.
+
+### 🔒 Secrets
+
+Deployment credentials are stored securely in GitHub repository secrets:
+
+- `SHINYAPPS_USERNAME`
+- `SHINYAPPS_TOKEN`
+- `SHINYAPPS_SECRET`
 
 ## 📁 File Structure
 
