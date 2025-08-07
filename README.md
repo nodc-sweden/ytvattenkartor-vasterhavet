@@ -28,7 +28,7 @@ This repository contains a Shiny web application provides interactive mapping an
 Clone this repository and install required R packages:
 
 ```r
-install.packages(c("shiny", "tidyverse", "sf", "R.matlab", "ggrepel"))
+install.packages(c("shiny", "tidyverse", "sf", "R.matlab", "ggrepel", "png", "tiff", "jpeg", "grid", "gridExtra", "ggpubr"))
 ```
 
 ## 🚀 Running the App
@@ -74,11 +74,24 @@ You can adjust:
 
 ## 🧪 Dependencies
 
+**SHARKtoolbox** is required to create the infoC export `.txt` file from LIMS exports.
+
 - `shiny`
-- `tidyverse`
-- `sf`
+- `dplyr`
+- `ggplot2`
+- `stringr`
+- `readr`
+- `purrr`
+- `tibble`
 - `R.matlab`
 - `ggrepel`
+- `sf`
+- `png`
+- `tiff`
+- `jpeg`
+- `grid`
+- `gridExtra`
+- `ggpubr`
 
 ## 📄 License
 
