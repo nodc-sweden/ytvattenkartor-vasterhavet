@@ -25,6 +25,11 @@ assign_pie_fill <- function(value, mean, std, two_std) {
   }
 }
 
+has_garbled_utf8 <- function(x) {
+  # Detect common mojibake patterns caused by UTF-8 misinterpreted as Latin1
+  grepl("Ã.|Ã¥|Ã¤|Ã¶|Ã–|Ã„|Ã…|â|€|™", x)
+}
+
 # Function to create a plot
 create_plot <- function(df, input, all_anomalies, anomaly_colors_swe, month_names_sv, parameter_map) {
   # Load spatial data: Swedish west coast polygon and filtered lakes in Sweden

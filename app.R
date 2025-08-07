@@ -177,6 +177,21 @@ server <- function(input, output, session) {
     data_upload <- read_tsv(input$data_file$datapath, locale = locale(encoding = "ISO-8859-1"), col_types = cols(), 
                             progress = FALSE, name_repair = "unique_quiet")
     
+    # Check for garbled characters in Station names
+    bad_stations <- unique(data_upload$Station[has_garbled_utf8(data_upload$Station)])
+    
+    if (length(bad_stations) > 0) {
+      showNotification(
+        paste0(
+          "Varning: Följande stationsnamn verkar innehålla felaktig teckenkodning (å/ä/ö):\n",
+          paste(bad_stations, collapse = ", "),
+          "\n\nKontrollera att filen är sparad i ISO-8859-1 eller använd rätt encoding."
+        ),
+        type = "error",
+        duration = 15
+      )
+    }
+    
     # Rename specific stations for consistency with plotting/statistical datasets
     data_upload$Station[data_upload$Station == "KOSTERFJORDEN"] <- "KOSTERFJORDEN (NR16)"
     data_upload$Station[data_upload$Station == "N7 OST NIDINGEN SLA 0-10"] <- "N7 OST NIDINGEN"
