@@ -532,7 +532,7 @@ server <- function(input, output, session) {
         heights = stack_heights
       )
       
-      title_text <- paste0("Ytvattenkartor västerhavet, ", month_names_sv[as.integer(input$month)], " ", input$year)
+      title_text <- paste0("Ytvattenkartor Västerhavet, ", month_names_sv[as.integer(input$month)], " ", input$year)
       
       # Center vertically and horizontally
       logo_page <- ggplot() +
