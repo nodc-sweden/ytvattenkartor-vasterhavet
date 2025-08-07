@@ -95,9 +95,9 @@ ui <- fluidPage(
       downloadButton("download_all_plots_zip", "Ladda ner plottar för alla parametrar (ZIP)"),
       br(), br(),
       downloadButton("download_all_plots_pdf", "Ladda ner månadsrapport (PDF)"),
-    width = 2),
+    width = 3),
     mainPanel(
-      plotOutput("map_plot", height = "1000px")
+      plotOutput("map_plot", height = "800px")
     )
   )
 )
@@ -501,7 +501,7 @@ server <- function(input, output, session) {
       logo_paths <- c(
         "assets/SMHI logotype svart RGB 52 mm.jpg",
         "assets/logo BVVF.tif",  # This will be 50% smaller
-        "assets/Länsstyrelsen i färg_liggande.jpg"
+        "assets/Lansstyrelsen.jpg"
       )
       
       # Function to read image and set custom height
