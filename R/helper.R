@@ -70,7 +70,7 @@ create_plot <- function(df, input, all_anomalies, anomaly_colors_swe, month_name
   )
   
   # Combine real data with dummy points to ensure complete legends
-  plot_df <- bind_rows(df, dummy_anomalies, dummy_extremes)
+  plot_df <- bind_rows(df, if(nrow(dummy_anomalies) > 0) dummy_anomalies, if(nrow(dummy_extremes) > 0) dummy_extremes)
   
   # Create the ggplot
   ggplot() +
