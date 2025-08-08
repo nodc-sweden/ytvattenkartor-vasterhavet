@@ -83,15 +83,35 @@ create_plot <- function(df, input, all_anomalies, anomaly_colors_swe, month_name
     geom_sf(data = lakes, fill = "lightblue", color = "darkgrey", linewidth = .1) +
     geom_path(data = rivers, aes(x = lon, y = lat), color = "lightblue", linewidth = 0.2, na.rm = TRUE) +
     geom_path(data = border, aes(x = lon, y = lat), color = "black", linewidth = 0.1, linetype = "dashed", na.rm = TRUE) +
-    geom_point(data = plot_df, aes(x = lon, y = lat, fill = anomaly_swe, color = extreme),
-               shape = 21, size = 4, stroke = 0.7, na.rm = TRUE) +
+    
+    geom_point(
+      data = plot_df,
+      aes(
+        x = lon, y = lat,
+        fill = anomaly_swe,
+        shape = extreme
+      ),
+      size = 4, stroke = 0.7, color = "black", na.rm = TRUE
+    ) +
+    
     scale_fill_manual(values = anomaly_colors_swe) +
-    scale_color_manual(values = c("Inom historiskt intervall" = "black", "Över/under max/min" = "red")) +
-    ggrepel::geom_text_repel(data = filter(plot_df, !is.na(combined_label)),
-                             aes(x = lon, y = lat, label = combined_label),
-                             size = 2, fontface = "bold") +
-    coord_sf(xlim = c(bbox["xmin"] - xpad, bbox["xmax"] + xpad),
-             ylim = c(bbox["ymin"] - ypad, bbox["ymax"] + ypad), expand = FALSE) +
+    scale_shape_manual(
+      values = c(
+        "Inom historiskt intervall" = 21,
+        "Över/under max/min"        = 25
+      )
+    ) +
+    
+    ggrepel::geom_text_repel(
+      data = filter(plot_df, !is.na(combined_label)),
+      aes(x = lon, y = lat, label = combined_label),
+      size = 2, fontface = "bold"
+    ) +
+    coord_sf(
+      xlim = c(bbox["xmin"] - xpad, bbox["xmax"] + xpad),
+      ylim = c(bbox["ymin"] - ypad, bbox["ymax"] + ypad),
+      expand = FALSE
+    ) +
     theme_minimal(base_size = 11) +
     theme(
       panel.grid = element_blank(),
@@ -102,15 +122,23 @@ create_plot <- function(df, input, all_anomalies, anomaly_colors_swe, month_name
     ) +
     labs(
       fill = "Avvikelse från referensvärde",
-      color = "Extremvärde",
-      title = paste0(parameter_map$parameter_name_plot[parameter_map$parameter_name == input$parameter], 
-                     parameter_map$parameter_depth[parameter_map$parameter_name == input$parameter], ", ",
-                     paste0(month_names_sv[as.numeric(input$month)], " ", input$year)),
+      shape = "Extremvärde",
+      title = paste0(
+        parameter_map$parameter_name_plot[parameter_map$parameter_name == input$parameter], 
+        parameter_map$parameter_depth[parameter_map$parameter_name == input$parameter], ", ",
+        paste0(month_names_sv[as.numeric(input$month)], " ", input$year)
+      ),
       subtitle = "Jämförelse med referensperioden 2007-2016",
       x = "Longitud", y = "Latitud"
     ) +
     guides(
-      fill = guide_legend(order = 1),
-      color = guide_legend(order = 2)
+      fill = guide_legend(
+        order = 1,
+        override.aes = list(shape = 21, color = "black") # makes fill legend use filled shape
+      ),
+      shape = guide_legend(
+        order = 2,
+        override.aes = list(fill = "white", color = "black") # keeps shape legend clean
+      )
     )
 }
