@@ -67,6 +67,12 @@ month_names_sv <- c("januari", "februari", "mars", "april", "maj", "juni",
 # Load helper functions
 source("R/helper.R")
 
+# Read version from DESCRIPTION
+pkg_version <- read.dcf("DESCRIPTION", fields = "Version")[1]
+
+# GitHub repo link
+github_url <- "https://github.com/nodc-sweden/ytvattenkartor-vasterhavet"
+
 # Define UI for application
 ui <- fluidPage(
   titlePanel("Ytvattenkartor för Infocentralen Västerhavet"),
@@ -99,7 +105,18 @@ ui <- fluidPage(
     mainPanel(
       plotOutput("map_plot", height = "800px")
     )
-  )
+  ),
+  
+  # Footer
+  tags$hr(),
+  tags$footer(
+    style = "text-align:center; padding:10px; font-size:0.9em; color:#666;",
+    HTML(
+      paste0(
+        "Version ", pkg_version, " – ",
+        "<a href='", github_url, "' target='_blank'>GitHub repository</a>"
+      )
+    ))
 )
 
 server <- function(input, output, session) {
