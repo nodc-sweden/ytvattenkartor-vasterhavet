@@ -100,6 +100,18 @@ ui <- fluidPage(
       br(), br(),
       downloadButton("download_all_plots_zip", "Ladda ner plottar för alla parametrar (ZIP)"),
       br(), br(),
+      div(
+        tags$div(
+          style = "font-weight: bold; margin-bottom: 4px; padding-left: 2px;",
+          "Inkludera logos i PDF"
+        ),
+        div(
+          style = "display: flex; gap: 10px; align-items: center; margin-left: 3px;",
+          tags$div(style = "margin: 0;", checkboxInput("include_logo_smhi", "SMHI", value = TRUE)),
+          tags$div(style = "margin: 0;", checkboxInput("include_logo_bvvf", "BVVF", value = TRUE)),
+          tags$div(style = "margin: 0;", checkboxInput("include_logo_lans", "NLST", value = TRUE))
+        )
+      ),
       downloadButton("download_all_plots_pdf", "Ladda ner månadsrapport (PDF)"),
     width = 3),
     mainPanel(
@@ -515,11 +527,15 @@ server <- function(input, output, session) {
       temp_dir <- tempdir()
       plots <- list()
       
-      logo_paths <- c(
-        "assets/SMHI logotype svart RGB 52 mm.jpg",
-        "assets/logo BVVF.tif",  # This will be 50% smaller
-        "assets/Lansstyrelsen.jpg"
+      # All possible logos with heights and checkbox links
+      all_logos <- list(
+        smhi = list(path = "assets/SMHI logotype svart RGB 52 mm.jpg", height = 1, include = input$include_logo_smhi),
+        bvvf = list(path = "assets/logo BVVF.tif",                    height = 1, include = input$include_logo_bvvf),
+        lans = list(path = "assets/Lansstyrelsen.jpg",                height = 1.5, include = input$include_logo_lans)
       )
+      
+      # Filter logos based on tickboxes
+      selected_logos <- Filter(function(x) isTRUE(x$include), all_logos)
       
       # Function to read image and set custom height
       read_image_as_grob <- function(path, height_inches = 1) {
@@ -536,33 +552,31 @@ server <- function(input, output, session) {
         rasterGrob(img, interpolate = TRUE, height = unit(height_inches, "inches"))
       }
       
-      # Heights for logos
-      logo_heights <- c(1, 1, 2)
-      logos <- mapply(read_image_as_grob, logo_paths, logo_heights, SIMPLIFY = FALSE)
-      
-      # Spacers between logos
-      spacer <- nullGrob()
-      spacer_height <- 0.3
-      
-      # Interleave logos and spacers
-      stack_grobs <- list(
-        logos[[1]], spacer, spacer,
-        logos[[2]], spacer,
-        logos[[3]]
-      )
-      
-      stack_heights <- unit(c(
-        logo_heights[1], spacer_height, spacer_height,
-        logo_heights[2], spacer_height,
-        logo_heights[3]
-      ), "inches")
-      
-      # Combine into a vertical stack
-      logo_stack <- arrangeGrob(
-        grobs = stack_grobs,
-        ncol = 1,
-        heights = stack_heights
-      )
+      # Build logo stack if any are selected
+      if (length(selected_logos) > 0) {
+        logo_paths   <- vapply(selected_logos, `[[`, "", "path")
+        logo_heights <- vapply(selected_logos, `[[`, 0,  "height")
+        logos <- mapply(read_image_as_grob, logo_paths, logo_heights, SIMPLIFY = FALSE)
+        
+        spacer <- nullGrob()
+        spacer_height <- 0.3
+        stack_grobs <- list()
+        stack_heights <- c()
+        
+        for (i in seq_along(logos)) {
+          stack_grobs <- c(stack_grobs, list(logos[[i]]))
+          stack_heights <- c(stack_heights, logo_heights[i])
+          if (i < length(logos)) {
+            stack_grobs <- c(stack_grobs, list(spacer))
+            stack_heights <- c(stack_heights, spacer_height)
+          }
+        }
+        
+        stack_heights <- unit(stack_heights, "inches")
+        logo_stack <- arrangeGrob(grobs = stack_grobs, ncol = 1, heights = stack_heights)
+      } else {
+        logo_stack <- nullGrob()
+      }
       
       title_text <- paste0("Ytvattenkartor Västerhavet, ", month_names_sv[as.integer(input$month)], " ", input$year)
       
@@ -577,7 +591,7 @@ server <- function(input, output, session) {
         annotation_custom(
           grob = logo_stack,
           xmin = -Inf, xmax = Inf,
-          ymin = 0.35, ymax = 0.5  # lower to make space for title
+          ymin = 0.5, ymax = 0.5  # lower to make space for title
         )
       
       # Add logo page to beginning of PDF
