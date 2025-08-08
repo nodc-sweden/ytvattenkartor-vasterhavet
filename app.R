@@ -90,7 +90,6 @@ ui <- fluidPage(
         ),
         selected = "Chla"
       ),
-      hr(),
       selectInput("bbox_option", "Välj kartutbredning", choices = c(
         "Bohuslän", "Halland", "Bohuslän och Halland", "Dynamisk"
       ), selected = "Bohuslän och Halland"),
