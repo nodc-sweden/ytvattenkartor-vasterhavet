@@ -6,23 +6,214 @@ convert_dmm_to_dd <- function(dmm) {
   return(dd)
 }
 
-# Function to assign pie fill level
-assign_pie_fill <- function(value, mean, std, two_std) {
-  if (is.na(value) || is.na(mean) || is.na(std) || is.na(two_std)) {
-    return(NA_real_)
-  } else if (value < mean - two_std) {
-    return(0)
-  } else if (value >= mean - two_std && value < mean - std) {
-    return(0.25)
-  } else if (value >= mean - std && value <= mean + std) {
-    return(0.5)
-  } else if (value > mean + std && value <= mean + two_std) {
-    return(0.75)
-  } else if (value > mean + two_std) {
-    return(1)
+has_garbled_utf8 <- function(x) {
+  # Detect common mojibake patterns caused by UTF-8 misinterpreted as Latin1
+  grepl("Ã.|Ã¥|Ã¤|Ã¶|Ã–|Ã„|Ã…|â|€|™", x)
+}
+
+# Function to read image and set custom height
+read_image_as_grob <- function(path, height_inches = 1) {
+  ext <- tools::file_ext(path)
+  img <- switch(
+    tolower(ext),
+    "png"  = png::readPNG(path),
+    "jpg"  = jpeg::readJPEG(path),
+    "jpeg" = jpeg::readJPEG(path),
+    "tif"  = tiff::readTIFF(path),
+    "tiff" = tiff::readTIFF(path),
+    stop(paste("Unsupported format:", ext))
+  )
+  rasterGrob(img, interpolate = TRUE, height = unit(height_inches, "inches"))
+}
+
+# Helper: join uploaded data with stats and add anomalies
+prepare_joined_data <- function(data, param, year, month, stats_tidy, all_anomalies) {
+  # Filter year/month
+  df_filtered <- data %>%
+    filter(Year == year, `Month (calc)` == month)
+  
+  # Depths from selected_depths logic
+  depth_df <- if (param == "O2_CTD (prio CTD)") {
+    df_filtered %>%
+      filter(!is.na(.data[[param]])) %>%
+      group_by(Station) %>%
+      slice_max(Depth, with_ties = FALSE) %>%
+      ungroup() %>%
+      transmute(Station = toupper(Station), depth = as.integer(Depth))
   } else {
-    return(NA_real_)
+    df_filtered %>%
+      filter(!is.na(.data[[param]])) %>%
+      distinct(Station) %>%
+      transmute(Station = toupper(Station), depth = 0L)
   }
+  
+  if (nrow(depth_df) == 0) return(NULL)
+  
+  # Join depths to data
+  df <- df_filtered %>%
+    mutate(Station = toupper(Station)) %>%
+    left_join(depth_df, by = "Station") %>%
+    filter(Depth == depth)
+  
+  if (nrow(df) == 0) return(NULL)
+  
+  # Get stats for the correct parameter
+  stat_param <- stats_tidy %>%
+    filter(parameter_name == param) %>%
+    mutate(station = toupper(station))
+  
+  if (nrow(stat_param) == 0) return(NULL)
+  
+  # Match stats depth
+  stat_best_match <- depth_df %>%
+    rowwise() %>%
+    mutate(depth_stat = {
+      station_depths <- stat_param %>%
+        filter(station == Station) %>%
+        filter(!is.na(mean)) %>%
+        filter(month == month) %>%
+        pull(depth)
+      
+      if (length(station_depths) == 0 || all(is.na(station_depths))) {
+        NA_integer_
+      } else if (param == "O2_CTD (prio CTD)") {
+        max(station_depths, na.rm = TRUE)
+      } else {
+        0L
+      }
+    }) %>%
+    ungroup() %>%
+    filter(!is.na(depth_stat))
+  
+  if (nrow(stat_best_match) == 0) return(NULL)
+  
+  # Join with stats and compute anomalies
+  joined <- df %>%
+    filter(!is.na(.data[[param]])) %>%
+    mutate(
+      Month = as.integer(`Month (calc)`),
+      depth = as.integer(Depth)
+    ) %>%
+    left_join(stat_param %>%
+                inner_join(stat_best_match, by = c("station" = "Station", "depth" = "depth_stat")),
+              by = c("Station" = "station", "Month" = "month", "depth" = "depth.y")) %>%
+    mutate(
+      value = .data[[param]],
+      anomaly_swe = case_when(
+        value < mean - `2std` ~ "Mycket lägre än normalt",
+        value >= mean - `2std` & value < mean - std ~ "Lägre än normalt",
+        value >= mean - std & value <= mean + std ~ "Normala värden",
+        value > mean + std & value <= mean + `2std` ~ "Högre än normalt",
+        value > mean + `2std` ~ "Mycket högre än normalt",
+        is.na(mean) ~ "Saknar historiska värden"
+      ),
+      anomaly_swe = factor(anomaly_swe, levels = all_anomalies),
+      extreme = factor(case_when(
+        (value < min & anomaly_swe == "Mycket lägre än normalt") |
+          (value > max & anomaly_swe == "Mycket högre än normalt") ~ "Över/under max/min",
+        TRUE ~ "Inom historiskt intervall"
+      ), levels = c("Inom historiskt intervall", "Över/under max/min")),
+      combined_label = paste0(Station, "\n", round(value, 2))
+    )
+  
+  if (nrow(joined) == 0) return(NULL)
+  
+  joined
+}
+
+# Helper: save plot for one parameter
+save_param_plot <- function(param, year, month, data, stats_tidy, all_anomalies,
+                            anomaly_colors_swe, month_names_sv, parameter_map,
+                            bbox_option, plot_width, plot_height, out_path) {
+  joined <- prepare_joined_data(data, param, year, month, stats_tidy, all_anomalies)
+  if (is.null(joined)) return(NULL)
+  
+  ggsave(
+    out_path,
+    plot = create_plot(joined, list(
+      parameter = param,
+      year = year,
+      month = month,
+      depth = NA,
+      bbox_option = bbox_option
+    ), all_anomalies, anomaly_colors_swe, month_names_sv, parameter_map),
+    width = plot_width / 2.54,
+    height = plot_height / 2.54,
+    dpi = 300,
+    bg = "white"
+  )
+  
+  out_path
+}
+
+# Return a ggplot for a given parameter (or NULL if no data)
+create_plot_for_param <- function(param, year, month, data, stats_tidy,
+                                  all_anomalies, anomaly_colors_swe, month_names_sv, parameter_map,
+                                  bbox_option, plot_width, plot_height) {
+  joined <- prepare_joined_data(data, param, year, month, stats_tidy, all_anomalies)
+  if (is.null(joined)) return(NULL)
+  
+  p <- create_plot(joined, list(
+    parameter = param,
+    year = year,
+    month = month,
+    depth = NA,
+    bbox_option = bbox_option
+  ), all_anomalies, anomaly_colors_swe, month_names_sv, parameter_map)
+  
+  # apply a small margin so page layout looks consistent in PDF
+  p + theme(plot.margin = unit(rep(0.2, 4), "cm"))
+}
+
+# Build a title/logo page as a ggplot (returns ggplot)
+create_logo_page <- function(include_smhi, include_bvvf, include_lans, month, year, month_names_sv) {
+  all_logos <- list(
+    smhi = list(path = "assets/SMHI logotype svart RGB 52 mm.jpg", height = 1, include = include_smhi),
+    bvvf = list(path = "assets/logo BVVF.tif",                    height = 1, include = include_bvvf),
+    lans = list(path = "assets/Lansstyrelsen.jpg",                height = 1.5, include = include_lans)
+  )
+  
+  selected_logos <- Filter(function(x) isTRUE(x$include), all_logos)
+  
+  if (length(selected_logos) > 0) {
+    logo_paths   <- vapply(selected_logos, `[[`, "", "path")
+    logo_heights <- vapply(selected_logos, `[[`, 0,  "height")
+    logos <- mapply(read_image_as_grob, logo_paths, logo_heights, SIMPLIFY = FALSE)
+    
+    spacer <- nullGrob()
+    spacer_height <- 0.3
+    stack_grobs <- list()
+    stack_heights <- c()
+    
+    for (i in seq_along(logos)) {
+      stack_grobs <- c(stack_grobs, list(logos[[i]]))
+      stack_heights <- c(stack_heights, logo_heights[i])
+      if (i < length(logos)) {
+        stack_grobs <- c(stack_grobs, list(spacer))
+        stack_heights <- c(stack_heights, spacer_height)
+      }
+    }
+    
+    stack_heights <- unit(stack_heights, "inches")
+    logo_stack <- arrangeGrob(grobs = stack_grobs, ncol = 1, heights = stack_heights)
+  } else {
+    logo_stack <- nullGrob()
+  }
+  
+  title_text <- paste0("Ytvattenkartor Västerhavet, ", month_names_sv[as.integer(month)], " ", year)
+  
+  ggplot() +
+    theme_void() +
+    ggtitle(title_text) +
+    theme(
+      plot.title = element_text(hjust = 0.5, size = 16, face = "bold", margin = margin(b = 10)),
+      plot.margin = unit(c(1, 1, 1, 1), "cm")
+    ) +
+    annotation_custom(
+      grob = logo_stack,
+      xmin = -Inf, xmax = Inf,
+      ymin = 0.5, ymax = 0.5
+    )
 }
 
 # Function to create a plot
@@ -70,7 +261,7 @@ create_plot <- function(df, input, all_anomalies, anomaly_colors_swe, month_name
   )
   
   # Combine real data with dummy points to ensure complete legends
-  plot_df <- bind_rows(df, dummy_anomalies, dummy_extremes)
+  plot_df <- bind_rows(df, if(nrow(dummy_anomalies) > 0) dummy_anomalies, if(nrow(dummy_extremes) > 0) dummy_extremes)
   
   # Create the ggplot
   ggplot() +
@@ -78,15 +269,35 @@ create_plot <- function(df, input, all_anomalies, anomaly_colors_swe, month_name
     geom_sf(data = lakes, fill = "lightblue", color = "darkgrey", linewidth = .1) +
     geom_path(data = rivers, aes(x = lon, y = lat), color = "lightblue", linewidth = 0.2, na.rm = TRUE) +
     geom_path(data = border, aes(x = lon, y = lat), color = "black", linewidth = 0.1, linetype = "dashed", na.rm = TRUE) +
-    geom_point(data = plot_df, aes(x = lon, y = lat, fill = anomaly_swe, color = extreme),
-               shape = 21, size = 4, stroke = 0.7, na.rm = TRUE) +
+    
+    geom_point(
+      data = plot_df,
+      aes(
+        x = lon, y = lat,
+        fill = anomaly_swe,
+        shape = extreme
+      ),
+      size = 4, stroke = 0.7, color = "black", na.rm = TRUE
+    ) +
+    
     scale_fill_manual(values = anomaly_colors_swe) +
-    scale_color_manual(values = c("Inom historiskt intervall" = "black", "Över/under max/min" = "red")) +
-    ggrepel::geom_text_repel(data = filter(plot_df, !is.na(combined_label)),
-                             aes(x = lon, y = lat, label = combined_label),
-                             size = 2, fontface = "bold") +
-    coord_sf(xlim = c(bbox["xmin"] - xpad, bbox["xmax"] + xpad),
-             ylim = c(bbox["ymin"] - ypad, bbox["ymax"] + ypad), expand = FALSE) +
+    scale_shape_manual(
+      values = c(
+        "Inom historiskt intervall" = 21,
+        "Över/under max/min"        = 25
+      )
+    ) +
+    
+    ggrepel::geom_text_repel(
+      data = filter(plot_df, !is.na(combined_label)),
+      aes(x = lon, y = lat, label = combined_label),
+      size = 2, fontface = "bold"
+    ) +
+    coord_sf(
+      xlim = c(bbox["xmin"] - xpad, bbox["xmax"] + xpad),
+      ylim = c(bbox["ymin"] - ypad, bbox["ymax"] + ypad),
+      expand = FALSE
+    ) +
     theme_minimal(base_size = 11) +
     theme(
       panel.grid = element_blank(),
@@ -96,14 +307,24 @@ create_plot <- function(df, input, all_anomalies, anomaly_colors_swe, month_name
       plot.subtitle = element_text(size = 12)
     ) +
     labs(
-      fill = "Avvikelse från normalvärde",
-      color = "Extremvärde",
-      title = parameter_map$parameter_name_short[parameter_map$parameter_name == input$parameter],
-      subtitle = paste0(month_names_sv[as.numeric(input$month)], " ", input$year),
+      fill = "Avvikelse från referensvärde",
+      shape = "Extremvärde",
+      title = paste0(
+        parameter_map$parameter_name_plot[parameter_map$parameter_name == input$parameter], 
+        parameter_map$parameter_depth[parameter_map$parameter_name == input$parameter], ", ",
+        paste0(month_names_sv[as.numeric(input$month)], " ", input$year)
+      ),
+      subtitle = "Jämförelse med referensperioden 2007-2016",
       x = "Longitud", y = "Latitud"
     ) +
     guides(
-      fill = guide_legend(order = 1),
-      color = guide_legend(order = 2)
+      fill = guide_legend(
+        order = 1,
+        override.aes = list(shape = 21, color = "black") # makes fill legend use filled shape
+      ),
+      shape = guide_legend(
+        order = 2,
+        override.aes = list(fill = "white", color = "black") # keeps shape legend clean
+      )
     )
 }
