@@ -93,8 +93,8 @@ ui <- fluidPage(
       selectInput("bbox_option", "Välj kartutbredning", choices = c(
         "Bohuslän", "Halland", "Bohuslän och Halland", "Dynamisk"
       ), selected = "Bohuslän och Halland"),
-      numericInput("plot_width", "Plotbredd, nedladdning (cm)", value = 15, min = 5, max = 100, step = 1),
-      numericInput("plot_height", "Plothöjd, nedladdning (cm)", value = 20, min = 5, max = 100, step = 1),
+      numericInput("plot_width", "Plotbredd, nedladdning (cm)", value = 15, min = 10, max = 100, step = 1),
+      numericInput("plot_height", "Plothöjd, nedladdning (cm)", value = 20, min = 10, max = 100, step = 1),
       downloadButton("download_current_png", "Ladda ner aktuell plot (PNG)"),
       br(), br(),
       downloadButton("download_all_plots_zip", "Ladda ner plottar för alla parametrar (ZIP)"),
@@ -102,7 +102,7 @@ ui <- fluidPage(
       div(
         tags$div(
           style = "font-weight: bold; margin-bottom: 4px; padding-left: 2px;",
-          "Inkludera logos i PDF"
+          "Inkludera logos i månadsrapport"
         ),
         div(
           style = "display: flex; gap: 10px; align-items: center; margin-left: 3px;",
@@ -288,7 +288,7 @@ server <- function(input, output, session) {
     stat_param <- stats() %>%
       filter(parameter_name == input$parameter)
     
-    # For each station, find the closest depth *below or equal* to sampled depth
+    # For each station, find the closest depth to sampled depth
     stat_best_match <- depth_df %>%
       rowwise() %>%
       mutate(depth_stat = {
@@ -596,6 +596,7 @@ server <- function(input, output, session) {
       # Add logo page to beginning of PDF
       plots[[length(plots) + 1]] <- logo_page
       
+      # Loop through each parameter and create plots
       for (param in parameter_map$parameter_name) {
         if (param == "H2S") next
         
@@ -604,8 +605,10 @@ server <- function(input, output, session) {
         df_filtered <- df_orig %>%
           filter(Year == input$year, `Month (calc)` == input$month)
         
+        # Skip this parameter if there's no data at all for it
         if (all(is.na(df_filtered[[param]]))) next
         
+        # Get depth info
         depth_df <- if (param == "O2_CTD (prio CTD)") {
           df_filtered %>%
             filter(!is.na(.data[[param]])) %>%
@@ -622,6 +625,7 @@ server <- function(input, output, session) {
         
         if (nrow(depth_df) == 0) next
         
+        # Join depths to data
         df <- df_filtered %>%
           mutate(Station = toupper(Station)) %>%
           left_join(depth_df, by = "Station") %>%
@@ -629,15 +633,18 @@ server <- function(input, output, session) {
         
         if (nrow(df) == 0) next
         
+        # Convert lat/lon to decimal degrees
         df$lat <- convert_dmm_to_dd(as.numeric(df$Lat))
         df$lon <- convert_dmm_to_dd(as.numeric(df$Lon))
         
+        # Get stats for the correct parameter
         stat_param <- stats() %>%
           filter(parameter_name == param) %>%
           mutate(station = toupper(station))
         
         if (nrow(stat_param) == 0) next
         
+        # For each station, find the closest depth to sampled depth
         stat_best_match <- depth_df %>%
           rowwise() %>%
           mutate(depth_stat = {
@@ -660,9 +667,11 @@ server <- function(input, output, session) {
         
         if (nrow(stat_best_match) == 0) next
         
+        # Now join using the adjusted depth
         stat <- stat_param %>%
           inner_join(stat_best_match, by = c("station" = "Station", "depth" = "depth_stat"))
         
+        # Join the data with statistics
         joined <- df %>%
           filter(!is.na(.data[[param]])) %>%
           mutate(
@@ -692,6 +701,7 @@ server <- function(input, output, session) {
         
         if (nrow(joined) == 0) next
         
+        # Create the plot for this parameter
         plot <- create_plot(joined, list(
           parameter = param,
           year = input$year,
@@ -704,13 +714,44 @@ server <- function(input, output, session) {
           p + theme(plot.margin = unit(rep(margin_cm, 4), "cm"))
         }
         
-        plots[[length(plots)+1]] <- add_margin(plot, margin_cm = 2)
+        # Add margin to the plot
+        plots[[length(plots)+1]] <- add_margin(plot, margin_cm = .2)
       }
       
       # Save all plots to one PDF
       if (length(plots) > 0) {
         pdf(pdf_file, width = 8.27, height = 11.69, onefile = TRUE)
-        for (p in plots) print(p)
+        
+        page_width_in  <- 8.27
+        page_height_in <- 11.69
+        plot_width_in  <- input$plot_width / 2.54
+        plot_height_in <- input$plot_height / 2.54
+        
+        # Print the title/logo page as a full page (no viewport)
+        logo_plot <- plots[[1]]
+
+        # If logo_plot is a ggplot: use print so it takes up the whole page
+        print(logo_plot)
+        
+        # Loop over the remaining plots (starting at 2 as the first is logo)
+        if (length(plots) > 1) {
+          for (i in seq(2, length(plots))) {
+            p <- plots[[i]]
+            grid.newpage()
+            # viewport in inches (A4 pdevice uses inches)
+            vp <- viewport(
+              width  = unit(plot_width_in,  "in"),
+              height = unit(plot_height_in, "in"),
+              x = 0.5, y = 0.5,
+              just = c("center", "center")
+            )
+            pushViewport(vp)
+            # Print each ggplot **inside** the viewport — important: newpage = FALSE
+            print(p, newpage = FALSE)
+            popViewport()
+          }
+        }
+        
         dev.off()
       } else {
         stop("Inga plottar tillgängliga för PDF-export.")
