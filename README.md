@@ -1,6 +1,6 @@
 # Surface water maps for the Västerhavet Info Centre
 
-This repository contains a [Shiny web application](https://nodc-sweden.shinyapps.io/ytvattenkartor/) provides interactive mapping and visualization of surface water anomalies in the Västerhavet region, based on data exported for InfoC. The app allows users to upload data, select parameters, and generate customized maps and summary plots based on historical statistics.
+This repository contains a [Shiny web application](https://nodc-sweden.shinyapps.io/ytvattenkartor/) provides interactive mapping and visualization of surface water anomalies in the Västerhavet region, based on data exported for InfoC. The app allows users to upload data, select parameters, and generate customized maps based on historical statistics.
 
 ## ✨ Features
 
@@ -15,7 +15,7 @@ This repository contains a [Shiny web application](https://nodc-sweden.shinyapps
 - Uses values from specific depths:
   - **Surface values (0 m)** are used for all parameters except for **oxygen concentration**
   - **Bottom values** are used for **oxygen concentration** to capture deep-water conditions
-- Categorizes anomalies (e.g., "Högre än normalt", "Lägre än normalt")
+- Categorizes anomalies (e.g., "Högre än normalt", "Lägre än normalt") and extremes
 - Downloads:
   - Current plot as PNG
   - All parameter plots for the current month as a ZIP archive
