@@ -27,10 +27,10 @@ read_image_as_grob <- function(path, height_inches = 1) {
 }
 
 # Helper: join uploaded data with stats and add anomalies
-prepare_joined_data <- function(data, param, year, month, stats_tidy, all_anomalies) {
+prepare_joined_data <- function(data, param, year, selected_month, stats_tidy, all_anomalies) {
   # Filter year/month
   df_filtered <- data %>%
-    filter(Year == year, `Month (calc)` == month)
+    filter(Year == year, `Month (calc)` == selected_month)
   
   # Depths from selected_depths logic
   depth_df <- if (param == "O2_CTD (prio CTD)") {
@@ -60,7 +60,9 @@ prepare_joined_data <- function(data, param, year, month, stats_tidy, all_anomal
   # Get stats for the correct parameter
   stat_param <- stats_tidy %>%
     filter(parameter_name == param) %>%
-    mutate(station = toupper(station))
+    mutate(station = toupper(station)) %>%
+    filter(month == as.integer(selected_month)) %>%
+    filter(!is.na(mean)) 
   
   if (nrow(stat_param) == 0) return(NULL)
   
@@ -71,7 +73,7 @@ prepare_joined_data <- function(data, param, year, month, stats_tidy, all_anomal
       station_depths <- stat_param %>%
         filter(station == Station) %>%
         filter(!is.na(mean)) %>%
-        filter(month == month) %>%
+        filter(month == selected_month) %>%
         pull(depth)
       
       if (length(station_depths) == 0 || all(is.na(station_depths))) {
@@ -109,10 +111,10 @@ prepare_joined_data <- function(data, param, year, month, stats_tidy, all_anomal
       ),
       anomaly_swe = factor(anomaly_swe, levels = all_anomalies),
       extreme = factor(case_when(
-        (value < min & anomaly_swe == "Mycket lägre än normalt") |
-          (value > max & anomaly_swe == "Mycket högre än normalt") ~ "Över/under max/min",
-        TRUE ~ "Inom historiskt intervall"
-      ), levels = c("Inom historiskt intervall", "Över/under max/min")),
+        value < min & anomaly_swe == "Mycket lägre än normalt" ~ "Lägre än historiskt minimum",
+        value > max & anomaly_swe == "Mycket högre än normalt" ~ "Högre än historiskt maximum",
+        TRUE ~ "Inom historiskt normalspann"
+      ), levels = c("Högre än historiskt maximum", "Inom historiskt normalspann", "Lägre än historiskt minimum")),
       combined_label = paste0(Station, "\n", round(value, 2))
     )
   
@@ -247,7 +249,7 @@ create_plot <- function(df, input, all_anomalies, anomaly_colors_swe, month_name
   dummy_anomalies <- tibble::tibble(
     lon = NA, lat = NA,
     anomaly_swe = factor(setdiff(all_anomalies, unique(df$anomaly_swe)), levels = all_anomalies),
-    extreme = factor("Inom historiskt intervall", levels = c("Inom historiskt intervall", "Över/under max/min")),
+    extreme = factor("Inom historiskt normalspann", levels = c("Högre än historiskt maximum", "Inom historiskt normalspann", "Lägre än historiskt minimum")),
     combined_label = NA
   )
   
@@ -255,8 +257,8 @@ create_plot <- function(df, input, all_anomalies, anomaly_colors_swe, month_name
   dummy_extremes <- tibble::tibble(
     lon = NA, lat = NA,
     anomaly_swe = factor("Normala värden", levels = all_anomalies),
-    extreme = factor(c("Inom historiskt intervall", "Över/under max/min"),
-                     levels = c("Inom historiskt intervall", "Över/under max/min")),
+    extreme = factor(c("Högre än historiskt maximum","Inom historiskt normalspann", "Lägre än historiskt minimum"),
+                     levels = c("Högre än historiskt maximum", "Inom historiskt normalspann", "Lägre än historiskt minimum")),
     combined_label = NA
   )
   
@@ -283,8 +285,9 @@ create_plot <- function(df, input, all_anomalies, anomaly_colors_swe, month_name
     scale_fill_manual(values = anomaly_colors_swe) +
     scale_shape_manual(
       values = c(
-        "Inom historiskt intervall" = 21,
-        "Över/under max/min"        = 25
+        "Inom historiskt normalspann" = 21,
+        "Lägre än historiskt minimum"                 = 25,
+        "Högre än historiskt maximum"                  = 24
       )
     ) +
     
