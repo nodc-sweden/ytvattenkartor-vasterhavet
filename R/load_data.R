@@ -1,3 +1,8 @@
+library(R.matlab)
+library(dplyr)
+library(purrr)
+library(tibble)
+
 # Read version from DESCRIPTION
 pkg_version <- read.dcf("DESCRIPTION", fields = "Version")[1]
 
