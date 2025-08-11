@@ -27,10 +27,10 @@ read_image_as_grob <- function(path, height_inches = 1) {
 }
 
 # Helper: join uploaded data with stats and add anomalies
-prepare_joined_data <- function(data, param, year, month, stats_tidy, all_anomalies) {
+prepare_joined_data <- function(data, param, year, selected_month, stats_tidy, all_anomalies) {
   # Filter year/month
   df_filtered <- data %>%
-    filter(Year == year, `Month (calc)` == month)
+    filter(Year == year, `Month (calc)` == selected_month)
   
   # Depths from selected_depths logic
   depth_df <- if (param == "O2_CTD (prio CTD)") {
@@ -60,7 +60,9 @@ prepare_joined_data <- function(data, param, year, month, stats_tidy, all_anomal
   # Get stats for the correct parameter
   stat_param <- stats_tidy %>%
     filter(parameter_name == param) %>%
-    mutate(station = toupper(station))
+    mutate(station = toupper(station)) %>%
+    filter(month == as.integer(selected_month)) %>%
+    filter(!is.na(mean)) 
   
   if (nrow(stat_param) == 0) return(NULL)
   
@@ -71,7 +73,7 @@ prepare_joined_data <- function(data, param, year, month, stats_tidy, all_anomal
       station_depths <- stat_param %>%
         filter(station == Station) %>%
         filter(!is.na(mean)) %>%
-        filter(month == month) %>%
+        filter(month == selected_month) %>%
         pull(depth)
       
       if (length(station_depths) == 0 || all(is.na(station_depths))) {
