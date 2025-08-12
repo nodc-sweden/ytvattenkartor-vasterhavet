@@ -45,16 +45,28 @@ Or click **Run App** in RStudio.
 
 ## 🚢 Deployment
 
-This repository uses **GitHub Actions** to automatically deploy the latest version of the app from the `main` branch to [shinyapps.io](https://nodc-sweden.shinyapps.io/ytvattenkartor/). The deployment is configured in the [`.github/workflows/shinyapps.yaml`](.github/workflows/shinyapps.yaml) file. 
+This repository uses **GitHub Actions** to automatically deploy the latest version of the app to [shinyapps.io](https://https://www.shinyapps.io/) or its test environment.  
+The deployment is configured in the [`.github/workflows/shinyapps.yaml`](.github/workflows/shinyapps.yaml) file.
 
 ### 🔁 Workflow Overview
 
-Whenever changes are pushed to the `main` branch or a pull request is merged into `main`, the following happens:
+The deployment target depends on how the workflow is triggered:
 
-1. The GitHub Actions workflow is triggered.
-2. The R environment is set up using the version specified in the workflow.
-3. Dependencies are installed using the `renv.lock` file.
-4. The app is deployed to shinyapps.io using the `rsconnect` package.
+- **Pull request to `main`** → Deploys to the **test app**: [`ytvattenkartor-test`](https://nodc-sweden.shinyapps.io/ytvattenkartor-test/)  
+  This allows testing the app before merging.
+- **Push or merge into `main`** → Deploys to the **production app**: [`ytvattenkartor`](https://nodc-sweden.shinyapps.io/ytvattenkartor/)
+
+**Workflow steps:**
+
+1. GitHub Actions detects the event (push or pull request).
+2. The app name (`APP_NAME`) is set dynamically:
+   - Pull request → `ytvattenkartor-test`
+   - Push to main → `ytvattenkartor`
+3. The R environment is set up with the version specified in the workflow.
+4. Dependencies are installed using the `renv.lock` file.
+5. The app is deployed to shinyapps.io using the `rsconnect` package, with `APP_NAME` passed to `rsconnect::deployApp()`.
+
+This setup ensures that all pull requests are tested in a staging environment before affecting the live application.
 
 ### 🔒 Secrets
 
@@ -69,11 +81,13 @@ Deployment credentials are stored securely in GitHub repository secrets:
 ```
 .
 ├── R/
-│   └── helper.R             # Contains helper functions like create_plot(), assign_pie_fill(), etc.
-├── data/
+│   ├── helper.R             # Contains helper functions like create_plot(), assign_pie_fill(), etc.
+│   └── load_data.R          # Loads station statistics from MATLAB .mat file, defines parameter metadata, anomaly categories, colors, and month names
+├── assets/                  # Contains logos and images used by the app
+├── data/                    # Contains data, such as map layers and historical data
 │   └── stat_stations.mat    # MATLAB file with historical station statistics
 ├── scripts/                 # Misc scripts not directly used by app
-├── app.R # Main Shiny app file
+├── app.R                    # Main Shiny app file
 └── README.md
 ```
 
