@@ -81,7 +81,7 @@ Deployment credentials are stored securely in GitHub repository secrets:
 ```
 .
 ├── R/
-│   ├── helper.R             # Contains helper functions like create_plot(), assign_pie_fill(), etc.
+│   ├── helper.R             # Contains helper functions like create_plot(), convert_dmm_to_dd() etc.
 │   └── load_data.R          # Loads station statistics from MATLAB .mat file, defines parameter metadata, anomaly categories, colors, and month names
 ├── assets/                  # Contains logos and images used by the app
 ├── data/                    # Contains data, such as map layers and historical data
@@ -103,18 +103,11 @@ Deployment credentials are stored securely in GitHub repository secrets:
 - **ZIP**: Download all parameter plots for the selected year and month.
 - **PDF**: Download all parameter plots for the selected year and month in a PDF, including a logo page.
 
-## 🔧 Customization
-
-You can adjust:
-- `parameter_map` to add or remove parameters.
-- Color palettes in `anomaly_colors_swe`.
-- Bounding box settings in `helper.R` depending on `bbox_option`.
-
 ## 🧪 Dependencies
 
 ### SHARKtoolbox
 
-**SHARKtoolbox** is required to create the infoC export `.txt` file from LIMS exports.
+**SHARKtoolbox** is required to create the infoC export `.txt` file from LIMS data exports.
 
 ### R packages
 - `shiny`
