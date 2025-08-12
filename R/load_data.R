@@ -31,7 +31,7 @@ parameter_map <- tibble::tibble(
 # Define all Swedish anomaly labels (used for categorizing measurement deviation)
 all_anomalies <- c(
   "Mycket högre än normalt", "Högre än normalt", "Normala värden",
-  "Lägre än normalt", "Mycket lägre än normalt", "Saknar historiska värden"
+  "Lägre än normalt", "Mycket lägre än normalt", "Saknar referensvärde"
 )
 
 # Define color codes for each anomaly level (used in maps and plots)
@@ -41,7 +41,7 @@ anomaly_colors_swe <- c(
   "Normala värden" = "#66bd63",
   "Lägre än normalt" = "#91bfdb",
   "Mycket lägre än normalt" = "#313695",
-  "Saknar historiska värden" = "white"
+  "Saknar referensvärde" = "white"
 )
 
 # Swedish month names (used for dropdowns, labels, etc.)

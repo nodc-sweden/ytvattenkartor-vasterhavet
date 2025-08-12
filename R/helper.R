@@ -107,7 +107,7 @@ prepare_joined_data <- function(data, param, year, selected_month, stats_tidy, a
         value >= mean - std & value <= mean + std ~ "Normala värden",
         value > mean + std & value <= mean + `2std` ~ "Högre än normalt",
         value > mean + `2std` ~ "Mycket högre än normalt",
-        is.na(mean) ~ "Saknar historiska värden"
+        is.na(mean) ~ "Saknar referensvärde"
       ),
       anomaly_swe = factor(anomaly_swe, levels = all_anomalies),
       extreme = factor(case_when(
@@ -310,7 +310,7 @@ create_plot <- function(df, input, all_anomalies, anomaly_colors_swe, month_name
       plot.subtitle = element_text(size = 12)
     ) +
     labs(
-      fill = "Avvikelse från referensvärde",
+      fill = "Avvikelse från medelvärde",
       shape = "Extremvärde",
       title = paste0(
         parameter_map$parameter_name_plot[parameter_map$parameter_name == input$parameter], 
