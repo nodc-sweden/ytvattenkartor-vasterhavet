@@ -1,6 +1,6 @@
 # Surface water maps for the Västerhavet Info Centre
 
-This repository contains a [Shiny web application](https://nodc-sweden.shinyapps.io/ytvattenkartor/) provides interactive mapping and visualization of surface water anomalies in the Västerhavet region, based on data exported for InfoC. The app allows users to upload data, select parameters, and generate customized maps based on historical statistics.
+This repository contains a [Shiny web application](https://nodc-sweden.shinyapps.io/ytvattenkartor/) that provides interactive mapping and visualization of surface water anomalies in the Västerhavet region, based on data exported for the Västerhavet Info Centre. The app allows users to upload data, select parameters, and generate customized maps based on historical statistics.
 
 ## ✨ Features
 
@@ -43,6 +43,32 @@ shiny::runApp()
 
 Or click **Run App** in RStudio.
 
+## 📁 File Structure
+
+```
+.
+├── R/
+│   ├── helper.R             # Contains helper functions like create_plot(), convert_dmm_to_dd() etc.
+│   └── load_data.R          # Loads station statistics from MATLAB .mat file, defines parameter metadata, anomaly categories, colors, and month names
+├── assets/                  # Contains logos and images used by the app
+├── data/                    # Contains data, such as map layers and historical data
+│   └── stat_stations.mat    # MATLAB file with historical station statistics
+├── scripts/                 # Misc scripts not directly used by app
+├── app.R                    # Main Shiny app file
+└── README.md
+```
+
+## 📄 Data Requirements
+
+- **Uploaded file**: Export from SHARKtoolbox, for InfoC in `.txt` format (tab-separated), encoded in ISO-8859-1 (latin1).
+- Must include columns like `Year`, `Month (calc)`, `Lat`, `Lon`, `Depth`, `Station`, and selected parameters (e.g., `Temp CTD (prio CTD)`).
+
+## 📤 Exports
+
+- **PNG**: Download the currently displayed plot.
+- **ZIP**: Download all parameter plots for the selected year and month.
+- **PDF**: Download all parameter plots for the selected year and month in a PDF, including a logo page.
+
 ## 🚢 Deployment
 
 This repository uses **GitHub Actions** to automatically deploy the latest version of the app to [shinyapps.io](https://https://www.shinyapps.io/) or its test environment.  
@@ -75,32 +101,6 @@ Deployment credentials are stored securely in GitHub repository secrets:
 - `SHINYAPPS_USERNAME`
 - `SHINYAPPS_TOKEN`
 - `SHINYAPPS_SECRET`
-
-## 📁 File Structure
-
-```
-.
-├── R/
-│   ├── helper.R             # Contains helper functions like create_plot(), convert_dmm_to_dd() etc.
-│   └── load_data.R          # Loads station statistics from MATLAB .mat file, defines parameter metadata, anomaly categories, colors, and month names
-├── assets/                  # Contains logos and images used by the app
-├── data/                    # Contains data, such as map layers and historical data
-│   └── stat_stations.mat    # MATLAB file with historical station statistics
-├── scripts/                 # Misc scripts not directly used by app
-├── app.R                    # Main Shiny app file
-└── README.md
-```
-
-## 📄 Data Requirements
-
-- **Uploaded file**: Export from SHARKtoolbox, for InfoC in `.txt` format (tab-separated), encoded in ISO-8859-1 (latin1).
-- Must include columns like `Year`, `Month (calc)`, `Lat`, `Lon`, `Depth`, `Station`, and selected parameters (e.g., `Temp CTD (prio CTD)`).
-
-## 📤 Exports
-
-- **PNG**: Download the currently displayed plot.
-- **ZIP**: Download all parameter plots for the selected year and month.
-- **PDF**: Download all parameter plots for the selected year and month in a PDF, including a logo page.
 
 ## 📄 License
 
