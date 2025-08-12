@@ -93,39 +93,14 @@ Deployment credentials are stored securely in GitHub repository secrets:
 
 ## 📄 Data Requirements
 
-- **Uploaded file**: Export from InfoC in `.txt` format (tab-separated), encoded in ISO-8859-1 (latin1).
+- **Uploaded file**: Export from SHARKtoolbox, for InfoC in `.txt` format (tab-separated), encoded in ISO-8859-1 (latin1).
 - Must include columns like `Year`, `Month (calc)`, `Lat`, `Lon`, `Depth`, `Station`, and selected parameters (e.g., `Temp CTD (prio CTD)`).
-- Automatically harmonizes station naming and calculates DIN values.
 
 ## 📤 Exports
 
 - **PNG**: Download the currently displayed plot.
 - **ZIP**: Download all parameter plots for the selected year and month.
 - **PDF**: Download all parameter plots for the selected year and month in a PDF, including a logo page.
-
-## 🧪 Dependencies
-
-### SHARKtoolbox
-
-**SHARKtoolbox** is required to create the infoC export `.txt` file from LIMS data exports.
-
-### R packages
-- `shiny`
-- `dplyr`
-- `ggplot2`
-- `stringr`
-- `readr`
-- `purrr`
-- `tibble`
-- `R.matlab`
-- `ggrepel`
-- `sf`
-- `png`
-- `tiff`
-- `jpeg`
-- `grid`
-- `gridExtra`
-- `ggpubr`
 
 ## 📄 License
 
