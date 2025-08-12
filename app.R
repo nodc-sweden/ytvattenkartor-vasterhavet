@@ -319,8 +319,6 @@ server <- function(input, output, session) {
       print(plots[[1]])
       
       if (length(plots) > 1) {
-        page_width_in  <- 8.27
-        page_height_in <- 11.69
         plot_width_in  <- input$plot_width / 2.54
         plot_height_in <- input$plot_height / 2.54
         
