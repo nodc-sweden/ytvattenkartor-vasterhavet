@@ -25,6 +25,10 @@ parameter_map <- tibble::tibble(
     "Temperatur", "Salthalt", "Syrgaskoncentration", "Syremättnad", "H2S", "Fosfatkoncentration", 
     "DIN-koncentration", "Kiselkoncentration", "Klorofyllkoncentration", "Secchidjup"
   ),
+  parameter_unit = c(
+    "°C", "psu", "ml/L", "%", "H2S", "µmol/L", 
+    "µmol/L", "µmol/L", "µg/L", "m"
+  ),
   parameter_depth = c(rep(" i ytvattnet", 2), " i bottenvattnet", rep(" i ytvattnet", 6), "")
 )
 

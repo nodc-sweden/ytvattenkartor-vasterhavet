@@ -314,6 +314,7 @@ create_plot <- function(df, input, all_anomalies, anomaly_colors_swe, month_name
       shape = "Extremvärde",
       title = paste0(
         parameter_map$parameter_name_plot[parameter_map$parameter_name == input$parameter], 
+        " (", parameter_map$parameter_unit[parameter_map$parameter_name == input$parameter], ")",
         parameter_map$parameter_depth[parameter_map$parameter_name == input$parameter], ", ",
         paste0(month_names_sv[as.numeric(input$month)], " ", input$year)
       ),
