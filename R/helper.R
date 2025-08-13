@@ -318,7 +318,7 @@ create_plot <- function(df, input, all_anomalies, anomaly_colors_swe, month_name
         parameter_map$parameter_depth[parameter_map$parameter_name == input$parameter], ", ",
         paste0(month_names_sv[as.numeric(input$month)], " ", input$year)
       ),
-      subtitle = "Jämförelse med referensperioden 2007-2016",
+      subtitle = paste("Jämförelse med referensperioden", input$reference_data),
       x = "Longitud", y = "Latitud"
     ) +
     guides(
