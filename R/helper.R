@@ -111,10 +111,10 @@ prepare_joined_data <- function(data, param, year, selected_month, stats_tidy, a
       ),
       anomaly_swe = factor(anomaly_swe, levels = all_anomalies),
       extreme = factor(case_when(
-        value < min & anomaly_swe == "Mycket lägre än normalt" ~ "Lägre än historiskt minimum",
-        value > max & anomaly_swe == "Mycket högre än normalt" ~ "Högre än historiskt maximum",
-        TRUE ~ "Inom historiskt normalspann"
-      ), levels = c("Högre än historiskt maximum", "Inom historiskt normalspann", "Lägre än historiskt minimum")),
+        value < min ~ "Under referensperiodens min",
+        value > max ~ "Över referensperiodens max",
+        TRUE ~ "Inom normalspann"
+      ), levels = c("Över referensperiodens max", "Inom normalspann", "Under referensperiodens min")),
       combined_label = paste0(Station, "\n", round(value, 2))
     )
   
@@ -249,7 +249,7 @@ create_plot <- function(df, input, all_anomalies, anomaly_colors_swe, month_name
   dummy_anomalies <- tibble::tibble(
     lon = NA, lat = NA,
     anomaly_swe = factor(setdiff(all_anomalies, unique(df$anomaly_swe)), levels = all_anomalies),
-    extreme = factor("Inom historiskt normalspann", levels = c("Högre än historiskt maximum", "Inom historiskt normalspann", "Lägre än historiskt minimum")),
+    extreme = factor("Inom normalspann", levels = c("Över referensperiodens max", "Inom normalspann", "Under referensperiodens min")),
     combined_label = NA
   )
   
@@ -257,8 +257,8 @@ create_plot <- function(df, input, all_anomalies, anomaly_colors_swe, month_name
   dummy_extremes <- tibble::tibble(
     lon = NA, lat = NA,
     anomaly_swe = factor("Normala värden", levels = all_anomalies),
-    extreme = factor(c("Högre än historiskt maximum","Inom historiskt normalspann", "Lägre än historiskt minimum"),
-                     levels = c("Högre än historiskt maximum", "Inom historiskt normalspann", "Lägre än historiskt minimum")),
+    extreme = factor(c("Över referensperiodens max","Inom normalspann", "Under referensperiodens min"),
+                     levels = c("Över referensperiodens max", "Inom normalspann", "Under referensperiodens min")),
     combined_label = NA
   )
   
@@ -285,9 +285,9 @@ create_plot <- function(df, input, all_anomalies, anomaly_colors_swe, month_name
     scale_fill_manual(values = anomaly_colors_swe) +
     scale_shape_manual(
       values = c(
-        "Inom historiskt normalspann" = 21,
-        "Lägre än historiskt minimum"                 = 25,
-        "Högre än historiskt maximum"                  = 24
+        "Inom normalspann" = 21,
+        "Under referensperiodens min"                 = 25,
+        "Över referensperiodens max"                  = 24
       )
     ) +
     
