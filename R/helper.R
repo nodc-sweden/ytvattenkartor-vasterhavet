@@ -276,20 +276,20 @@ create_plot <- function(df, input, all_anomalies, anomaly_colors_swe, month_name
       data = plot_df,
       aes(
         x = lon, y = lat,
-        fill = anomaly_swe,
-        shape = extreme
+        fill = anomaly_swe
+        # shape = extreme
       ),
-      size = 4, stroke = 0.7, color = "black", na.rm = TRUE
+      size = 4, shape = 21, stroke = 0.7, color = "black", na.rm = TRUE
     ) +
     
     scale_fill_manual(values = anomaly_colors_swe) +
-    scale_shape_manual(
-      values = c(
-        "Inom normalspann" = 21,
-        "Under minimum"                 = 25,
-        "Över maximum"                  = 24
-      )
-    ) +
+    # scale_shape_manual(
+    #   values = c(
+    #     "Inom normalspann" = 21,
+    #     "Under minimum"                 = 25,
+    #     "Över maximum"                  = 24
+    #   )
+    # ) +
     
     ggrepel::geom_text_repel(
       data = filter(plot_df, !is.na(combined_label)),
@@ -311,7 +311,7 @@ create_plot <- function(df, input, all_anomalies, anomaly_colors_swe, month_name
     ) +
     labs(
       fill = "Avvikelse från medelvärde",
-      shape = "Avvikelse från referensintervall",
+      # shape = "Avvikelse från referensintervall",
       title = paste0(
         parameter_map$parameter_name_plot[parameter_map$parameter_name == input$parameter], " (",
         parameter_map$parameter_unit[parameter_map$parameter_name == input$parameter], ")",
@@ -326,9 +326,9 @@ create_plot <- function(df, input, all_anomalies, anomaly_colors_swe, month_name
         order = 1,
         override.aes = list(shape = 21, color = "black") # makes fill legend use filled shape
       ),
-      shape = guide_legend(
-        order = 2,
-        override.aes = list(fill = "white", color = "black") # keeps shape legend clean
-      )
+      # shape = guide_legend(
+      #   order = 2,
+      #   override.aes = list(fill = "white", color = "black") # keeps shape legend clean
+      # )
     )
 }
