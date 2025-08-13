@@ -26,8 +26,8 @@ parameter_map <- tibble::tibble(
     "DIN-koncentration", "Kiselkoncentration", "Klorofyllkoncentration", "Secchidjup"
   ),
   parameter_unit = c(
-    "°C", "psu", "ml/L", "%", "H2S", "µmol/L", 
-    "µmol/L", "µmol/L", "µg/L", "m"
+    "°C", "psu", "ml/l", "%", "H2S", "µmol/l", 
+    "µmol/l", "µmol/l", "µg/l", "m"
   ),
   parameter_depth = c(rep(" i ytvattnet", 2), " i bottenvattnet", rep(" i ytvattnet", 6), "")
 )
