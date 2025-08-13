@@ -111,10 +111,10 @@ prepare_joined_data <- function(data, param, year, selected_month, stats_tidy, a
       ),
       anomaly_swe = factor(anomaly_swe, levels = all_anomalies),
       extreme = factor(case_when(
-        value < min ~ "Under referensperiodens min",
-        value > max ~ "Över referensperiodens max",
+        value < min ~ "Under minimum",
+        value > max ~ "Över maximum",
         TRUE ~ "Inom normalspann"
-      ), levels = c("Över referensperiodens max", "Inom normalspann", "Under referensperiodens min")),
+      ), levels = c("Över maximum", "Inom normalspann", "Under minimum")),
       combined_label = paste0(Station, "\n", round(value, 2))
     )
   
@@ -249,7 +249,7 @@ create_plot <- function(df, input, all_anomalies, anomaly_colors_swe, month_name
   dummy_anomalies <- tibble::tibble(
     lon = NA, lat = NA,
     anomaly_swe = factor(setdiff(all_anomalies, unique(df$anomaly_swe)), levels = all_anomalies),
-    extreme = factor("Inom normalspann", levels = c("Över referensperiodens max", "Inom normalspann", "Under referensperiodens min")),
+    extreme = factor("Inom normalspann", levels = c("Över maximum", "Inom normalspann", "Under minimum")),
     combined_label = NA
   )
   
@@ -257,8 +257,8 @@ create_plot <- function(df, input, all_anomalies, anomaly_colors_swe, month_name
   dummy_extremes <- tibble::tibble(
     lon = NA, lat = NA,
     anomaly_swe = factor("Normala värden", levels = all_anomalies),
-    extreme = factor(c("Över referensperiodens max","Inom normalspann", "Under referensperiodens min"),
-                     levels = c("Över referensperiodens max", "Inom normalspann", "Under referensperiodens min")),
+    extreme = factor(c("Över maximum","Inom normalspann", "Under minimum"),
+                     levels = c("Över maximum", "Inom normalspann", "Under minimum")),
     combined_label = NA
   )
   
@@ -286,8 +286,8 @@ create_plot <- function(df, input, all_anomalies, anomaly_colors_swe, month_name
     scale_shape_manual(
       values = c(
         "Inom normalspann" = 21,
-        "Under referensperiodens min"                 = 25,
-        "Över referensperiodens max"                  = 24
+        "Under minimum"                 = 25,
+        "Över maximum"                  = 24
       )
     ) +
     
@@ -311,7 +311,7 @@ create_plot <- function(df, input, all_anomalies, anomaly_colors_swe, month_name
     ) +
     labs(
       fill = "Avvikelse från medelvärde",
-      shape = "Extremvärde",
+      shape = "Avvikelse från referensintervall",
       title = paste0(
         parameter_map$parameter_name_plot[parameter_map$parameter_name == input$parameter], " (",
         parameter_map$parameter_unit[parameter_map$parameter_name == input$parameter], ")",
