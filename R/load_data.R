@@ -65,7 +65,7 @@ month_names_sv <- c("januari", "februari", "mars", "april", "maj", "juni",
                     "juli", "augusti", "september", "oktober", "november", "december")
 
 # # Read MATLAB .mat file containing statistical data
-# mat <- readMat("data/stat_stations.mat")
+# mat <- readMat("data/reference_data/stat_stations.mat")
 # 
 # # Extract the 3D array of station statistics
 # stat_array <- mat$stat
@@ -102,4 +102,4 @@ month_names_sv <- c("januari", "februari", "mars", "april", "maj", "juni",
 # # Fix spacing issue in one station name (data error correction)
 # stats_tidy$station[stats_tidy$station == "L9  LAHOLMSBUKTEN"]   <- "L9 LAHOLMSBUKTEN"
 
-stats_list <- readRDS("data/stats.rds")
+stats_list <- readRDS(file.path("data", "reference_data", "reference_data.rds"))

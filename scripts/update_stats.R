@@ -2,15 +2,16 @@ library(SHARK4R)
 library(dplyr)
 library(tidyr)
 library(stringr)
+library(purrr)
 
-source("R/load_data.R")
+source(file.path("R", "load_data.R"))
 
 # Define year interval
 to_year = 2024
 from_year <- to_year-9
 
 # Stations to download
-station_names <- read_lines("data/station_names.txt")
+station_names <- read_lines(file.path("data", "map_info", "station_names.txt"))
 
 # Download Physchem data from SHARK
 shark_data <- get_shark_data(fromYear = from_year, 
@@ -19,6 +20,17 @@ shark_data <- get_shark_data(fromYear = from_year,
                              dataTypes = "Physical and Chemical",
                              stationName = station_names,
                              verbose = FALSE)
+
+# Rename specific stations for consistency with plotting/statistical datasets
+shark_data$station_name[shark_data$station_name == "KOSTERFJORDEN NR16"] <- "KOSTERFJORDEN (NR16)"
+
+# Store year ranges for each station in a data frame
+years_df <- shark_data %>%
+  group_by(station_name) %>%
+  summarise(
+    year_min = min(visit_year, na.rm = TRUE),
+    year_max = max(visit_year, na.rm = TRUE)
+  )
 
 # Find available year
 available_max_year <- max(shark_data$visit_year)
@@ -111,7 +123,8 @@ stats <- shark_clean %>%
   arrange(station, parameter_id, std_depth, month) %>%
   rename(depth = std_depth) %>% 
   select(-n) %>%
-  left_join(parameter_map, by = "parameter_id")
+  left_join(parameter_map, by = "parameter_id") %>%
+  left_join(years_df, by = c("station" = "station_name"))
 
 # Append to list
 stats_list[[as.character(paste0(available_min_year, "-", available_max_year))]] <- stats
@@ -120,4 +133,15 @@ stats_list[[as.character(paste0(available_min_year, "-", available_max_year))]] 
 stats_list <- stats_list[order(names(stats_list))]
 
 # Save data
-saveRDS(stats_list, "data/stats.rds")
+saveRDS(stats_list, file.path("data", "reference_data", "reference_data.rds"))
+
+# Create output folder
+out_dir <- file.path("data", "reference_data", "txt")
+dir.create(out_dir, showWarnings = FALSE)
+
+# Loop and write each data frame to a separate text file
+purrr::walk2(
+  stats_list,
+  names(stats_list),
+  ~ write_tsv(.x, file.path(out_dir, paste0(.y, ".txt")), progress = FALSE)
+)
