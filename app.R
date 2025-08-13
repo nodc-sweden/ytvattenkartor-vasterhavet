@@ -113,7 +113,7 @@ server <- function(input, output, session) {
   output$reference_data_ui <- renderUI({
     selectInput(
       "reference_data",
-      "Välj referensdata",
+      "Välj referensperiod",
       choices = names(stats_list),
       selected = names(stats_list)[1]
     )
