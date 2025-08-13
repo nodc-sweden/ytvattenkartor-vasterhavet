@@ -25,8 +25,8 @@ library(gridExtra)
 library(ggpubr)
 
 # Load helper functions and data
-source("R/helper.R")
-source("R/load_data.R")
+source(file.path("R", "helper.R"))
+source(file.path("R", "load_data.R"))
 
 # Define UI for application
 ui <- fluidPage(
@@ -35,6 +35,7 @@ ui <- fluidPage(
     sidebarPanel(
       fileInput("data_file", "Ladda upp InfoC-export (.txt)", accept = ".txt"),
       uiOutput("reference_data_ui"),
+      checkboxInput("add_shapes", "Visa avvikelse från referensintervall", value = FALSE),
       uiOutput("year_ui"),
       selectInput("month", "Välj månad", choices = setNames(1:12, str_to_sentence(month_names_sv)), selected = 1),
       selectInput(
@@ -263,7 +264,7 @@ server <- function(input, output, session) {
         file_saved <- save_param_plot(
           param, input$year, input$month, uploaded_data(), selected_stats(), all_anomalies,
           anomaly_colors_swe, month_names_sv, parameter_map, input$bbox_option,
-          input$plot_width, input$plot_height, file_path
+          input$plot_width, input$plot_height, file_path, input$add_shapes, input$reference_data
         )
         
         # If a plot was successfully saved, add it to the files list
@@ -318,7 +319,9 @@ server <- function(input, output, session) {
           parameter_map = parameter_map,
           bbox_option = input$bbox_option,
           plot_width = input$plot_width,
-          plot_height = input$plot_height
+          plot_height = input$plot_height,
+          add_shapes = input$add_shapes,
+          reference_data = input$reference_data
         )
         
         if (!is.null(p)) plots[[length(plots) + 1]] <- p

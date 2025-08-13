@@ -126,7 +126,8 @@ prepare_joined_data <- function(data, param, year, selected_month, stats_tidy, a
 # Helper: save plot for one parameter
 save_param_plot <- function(param, year, month, data, stats_tidy, all_anomalies,
                             anomaly_colors_swe, month_names_sv, parameter_map,
-                            bbox_option, plot_width, plot_height, out_path) {
+                            bbox_option, plot_width, plot_height, out_path, add_shapes,
+                            reference_data) {
   joined <- prepare_joined_data(data, param, year, month, stats_tidy, all_anomalies)
   if (is.null(joined)) return(NULL)
   
@@ -137,7 +138,9 @@ save_param_plot <- function(param, year, month, data, stats_tidy, all_anomalies,
       year = year,
       month = month,
       depth = NA,
-      bbox_option = bbox_option
+      bbox_option = bbox_option,
+      add_shapes = add_shapes,
+      reference_data = reference_data
     ), all_anomalies, anomaly_colors_swe, month_names_sv, parameter_map),
     width = plot_width / 2.54,
     height = plot_height / 2.54,
@@ -151,7 +154,7 @@ save_param_plot <- function(param, year, month, data, stats_tidy, all_anomalies,
 # Return a ggplot for a given parameter (or NULL if no data)
 create_plot_for_param <- function(param, year, month, data, stats_tidy,
                                   all_anomalies, anomaly_colors_swe, month_names_sv, parameter_map,
-                                  bbox_option, plot_width, plot_height) {
+                                  bbox_option, plot_width, plot_height, add_shapes, reference_data) {
   joined <- prepare_joined_data(data, param, year, month, stats_tidy, all_anomalies)
   if (is.null(joined)) return(NULL)
   
@@ -160,7 +163,9 @@ create_plot_for_param <- function(param, year, month, data, stats_tidy,
     year = year,
     month = month,
     depth = NA,
-    bbox_option = bbox_option
+    bbox_option = bbox_option,
+    add_shapes = add_shapes,
+    reference_data = reference_data
   ), all_anomalies, anomaly_colors_swe, month_names_sv, parameter_map)
   
   # apply a small margin so page layout looks consistent in PDF
@@ -257,7 +262,7 @@ create_plot <- function(df, input, all_anomalies, anomaly_colors_swe, month_name
   dummy_extremes <- tibble::tibble(
     lon = NA, lat = NA,
     anomaly_swe = factor("Normala värden", levels = all_anomalies),
-    extreme = factor(c("Över maximum","Inom normalspann", "Under minimum"),
+    extreme = factor(c("Över maximum", "Inom normalspann", "Under minimum"),
                      levels = c("Över maximum", "Inom normalspann", "Under minimum")),
     combined_label = NA
   )
@@ -265,24 +270,42 @@ create_plot <- function(df, input, all_anomalies, anomaly_colors_swe, month_name
   # Combine real data with dummy points to ensure complete legends
   plot_df <- bind_rows(df, if(nrow(dummy_anomalies) > 0) dummy_anomalies, if(nrow(dummy_extremes) > 0) dummy_extremes)
   
+  # Define aesthetics conditionally
+  if (input$add_shapes) {
+    point_aes <- aes(x = lon, y = lat, fill = anomaly_swe, shape = extreme)
+    shape_fixed <- NULL
+  } else {
+    point_aes <- aes(x = lon, y = lat, fill = anomaly_swe)
+    shape_fixed <- 21
+  }
+  
   # Create the ggplot
-  ggplot() +
+  p <- ggplot() +
     geom_sf(data = sw_coast, fill = "#eeeac4", color = "darkgrey", linewidth = .1) +
     geom_sf(data = lakes, fill = "lightblue", color = "darkgrey", linewidth = .1) +
     geom_path(data = rivers, aes(x = lon, y = lat), color = "lightblue", linewidth = 0.2, na.rm = TRUE) +
-    geom_path(data = border, aes(x = lon, y = lat), color = "black", linewidth = 0.1, linetype = "dashed", na.rm = TRUE) +
+    geom_path(data = border, aes(x = lon, y = lat), color = "black", linewidth = 0.1, linetype = "dashed", na.rm = TRUE)
     
-    geom_point(
-      data = plot_df,
-      aes(
-        x = lon, y = lat,
-        fill = anomaly_swe
-        # shape = extreme
-      ),
-      size = 4, shape = 21, stroke = 0.7, color = "black", na.rm = TRUE
-    ) +
+  
+  if (input$add_shapes) {
+    p <- p + geom_point(data = plot_df, aes(x = lon, y = lat, fill = anomaly_swe, shape = extreme),
+                    size = 4, stroke = 0.7, color = "black", na.rm = TRUE)
+  } else {
+    p <- p + geom_point(data = plot_df, aes(x = lon, y = lat, fill = anomaly_swe),
+                    size = 4, shape = 21, stroke = 0.7, color = "black", na.rm = TRUE)
+  }
+    # geom_point(
+    #   data = plot_df,
+    #   mapping = point_aes,
+    #   # aes(
+    #   #   x = lon, y = lat,
+    #   #   fill = anomaly_swe
+    #   #   # shape = extreme
+    #   # ),
+    #   size = 4, shape = shape_fixed, stroke = 0.7, color = "black", na.rm = TRUE
+    # ) +
     
-    scale_fill_manual(values = anomaly_colors_swe) +
+    p <- p + scale_fill_manual(values = anomaly_colors_swe) +
     # scale_shape_manual(
     #   values = c(
     #     "Inom normalspann" = 21,
@@ -331,4 +354,29 @@ create_plot <- function(df, input, all_anomalies, anomaly_colors_swe, month_name
       #   override.aes = list(fill = "white", color = "black") # keeps shape legend clean
       # )
     )
+  
+  # Conditionally add the shape scale + legend
+  if (input$add_shapes) {
+    p <- p +
+      # labs(
+      #   shape = "Avvikelse från referensintervall") + 
+      scale_shape_manual(
+        name = "Avvikelse från referensintervall",
+        values = c(
+          "Över maximum"     = 24,
+          "Inom normalspann" = 21,
+          "Under minimum"    = 25
+        )
+      ) +
+      guides(
+        shape = guide_legend(
+          order = 2,
+          override.aes = list(fill = "white", color = "black")
+        )
+      )
+  }
+  
+  p
+  
+  
 }
