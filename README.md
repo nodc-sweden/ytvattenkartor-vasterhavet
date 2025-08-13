@@ -6,16 +6,17 @@ This repository contains a [Shiny web application](https://nodc-sweden.shinyapps
 
 - Upload `.txt` files from a InfoC export from **SHARKtoolbox**
 - Dynamic selection of:
+  - Reference dataset
   - Year and month
   - Water quality parameters (e.g., Temperature, Salinity, Oxygen, etc.)
   - Geographic extent (Bohuslän, Halland, Bohuslän + Halland or dynamic based on available coordinates)
-  - Plot size
+  - Plot size and aesthetics
 - Calculates DIN from NO₂, NO₃, and NH₄
-- Compares measurements to historical statistics
+- Compares measurements to historical statistics (e.g., 2007-2016)
 - Uses values from specific depths:
   - **Surface values (0 m)** are used for all parameters except for **oxygen concentration**
   - **Bottom values** are used for **oxygen concentration** to capture deep-water conditions
-- Categorizes anomalies (e.g., "Högre än normalt", "Lägre än normalt") and extremes
+- Categorizes anomalies (e.g., "Högre än normalt", "Lägre än normalt") and extremes (optionally)
 - Downloads:
   - Current plot as PNG
   - All parameter plots for the current month as a ZIP archive
@@ -49,11 +50,11 @@ Or click **Run App** in RStudio.
 .
 ├── R/
 │   ├── helper.R             # Contains helper functions like create_plot(), convert_dmm_to_dd() etc.
-│   └── load_data.R          # Loads station statistics from MATLAB .mat file, defines parameter metadata, anomaly categories, colors, and month names
+│   └── load_data.R          # Loads station reference statistics from file, defines parameter metadata, anomaly categories, colors, and month names
 ├── assets/                  # Contains logos and images used by the app
-├── data/                    # Contains data, such as map layers and historical data
-│   └── stat_stations.mat    # MATLAB file with historical station statistics
-├── scripts/                 # Misc scripts not directly used by app
+├── data/                    # Contains data, such as map layers and reference data
+├── scripts/                 # Misc scripts not directly used by app, but used for pre-processing data (e.g. updating reference datasets)
+│   └── update_stats.R       # Script to update station reference statistics using `SHARK4R`
 ├── app.R                    # Main Shiny app file
 └── README.md
 ```

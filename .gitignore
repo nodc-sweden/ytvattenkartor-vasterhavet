@@ -58,6 +58,7 @@ data/EEA_Coastline_Polygon_Shape/*
 data/ne_10m_lakes/ne_10m_lakes*
 data/map_info/bvvf_coast.dat
 data/BH_19_21_2025-05-27.txt
+data/reference_data/txt/*.txt
 
 # Output
 output/

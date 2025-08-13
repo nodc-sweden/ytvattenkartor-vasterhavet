@@ -15,7 +15,6 @@ library(readr)
 library(purrr)
 library(tibble)
 library(sf)
-library(R.matlab)
 library(ggrepel)
 library(png)
 library(jpeg)
@@ -25,8 +24,8 @@ library(gridExtra)
 library(ggpubr)
 
 # Load helper functions and data
-source("R/helper.R")
-source("R/load_data.R")
+source(file.path("R", "helper.R"))
+source(file.path("R", "load_data.R"))
 
 # Define UI for application
 ui <- fluidPage(
@@ -34,6 +33,8 @@ ui <- fluidPage(
   sidebarLayout(
     sidebarPanel(
       fileInput("data_file", "Ladda upp InfoC-export (.txt)", accept = ".txt"),
+      uiOutput("reference_data_ui"),
+      checkboxInput("add_shapes", "Visa avvikelse från referensintervall", value = FALSE),
       uiOutput("year_ui"),
       selectInput("month", "Välj månad", choices = setNames(1:12, str_to_sentence(month_names_sv)), selected = 1),
       selectInput(
@@ -106,6 +107,21 @@ server <- function(input, output, session) {
         selected = max(available_years, na.rm = TRUE)
       )
     }
+  })
+  
+  # Example: if stats_list is preloaded in global environment
+  output$reference_data_ui <- renderUI({
+    selectInput(
+      "reference_data",
+      "Välj referensperiod",
+      choices = names(stats_list),
+      selected = names(stats_list)[1]
+    )
+  })
+  
+  # Access the chosen dataframe like this:
+  selected_stats <- reactive({
+    stats_list[[input$reference_data]]
   })
   
   # Define a reactive expression to read and preprocess the uploaded data file
@@ -188,7 +204,7 @@ server <- function(input, output, session) {
   data_joined <- reactive({
     req(uploaded_data(), input$year, input$month, input$parameter)
     prepare_joined_data(uploaded_data(), input$parameter, input$year, input$month,
-                        stats_tidy, all_anomalies)
+                        selected_stats(), all_anomalies)
   })
   
   # Define the reactive output for rendering the map plot
@@ -245,9 +261,9 @@ server <- function(input, output, session) {
         
         # Generate and save the parameter plot using a helper function
         file_saved <- save_param_plot(
-          param, input$year, input$month, uploaded_data(), stats_tidy, all_anomalies,
+          param, input$year, input$month, uploaded_data(), selected_stats(), all_anomalies,
           anomaly_colors_swe, month_names_sv, parameter_map, input$bbox_option,
-          input$plot_width, input$plot_height, file_path
+          input$plot_width, input$plot_height, file_path, input$add_shapes, input$reference_data
         )
         
         # If a plot was successfully saved, add it to the files list
@@ -295,14 +311,16 @@ server <- function(input, output, session) {
           year = input$year,
           month = input$month,
           data = df_orig,
-          stats_tidy = stats_tidy,
+          stats_tidy = selected_stats(),
           all_anomalies = all_anomalies,
           anomaly_colors_swe = anomaly_colors_swe,
           month_names_sv = month_names_sv,
           parameter_map = parameter_map,
           bbox_option = input$bbox_option,
           plot_width = input$plot_width,
-          plot_height = input$plot_height
+          plot_height = input$plot_height,
+          add_shapes = input$add_shapes,
+          reference_data = input$reference_data
         )
         
         if (!is.null(p)) plots[[length(plots) + 1]] <- p
