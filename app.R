@@ -289,7 +289,8 @@ server <- function(input, output, session) {
         file_saved <- save_param_plot(
           param, input$year, input$month, uploaded_data(), selected_stats(), all_anomalies,
           anomaly_colors_swe, month_names_sv, parameter_map, input$bbox_option,
-          input$plot_width, input$plot_height, file_path, input$add_shapes, input$reference_data
+          input$plot_width, input$plot_height, file_path, input$add_shapes, input$reference_data,
+          input$only_flanks
         )
         
         # If a plot was successfully saved, add it to the files list
@@ -346,7 +347,8 @@ server <- function(input, output, session) {
           plot_width = input$plot_width,
           plot_height = input$plot_height,
           add_shapes = input$add_shapes,
-          reference_data = input$reference_data
+          reference_data = input$reference_data,
+          only_flanks = input$only_flanks
         )
         
         if (!is.null(p)) plots[[length(plots) + 1]] <- p
