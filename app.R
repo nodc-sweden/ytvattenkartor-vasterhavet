@@ -34,7 +34,33 @@ ui <- fluidPage(
     sidebarPanel(
       fileInput("data_file", "Ladda upp InfoC-export (.txt)", accept = ".txt"),
       uiOutput("reference_data_ui"),
-      checkboxInput("add_shapes", "Visa avvikelse från referensintervall", value = FALSE),
+      # checkboxInput("add_shapes", "Visa avvikelse från referensintervall", value = FALSE),
+      tags$script(HTML("
+    document.addEventListener('DOMContentLoaded', function() {
+      const firstBox = document.getElementById('add_shapes');
+      const secondBox = document.getElementById('only_flanks');
+
+      function toggleSecond() {
+        secondBox.disabled = !firstBox.checked;
+        if (!firstBox.checked) secondBox.checked = false;
+      }
+
+      firstBox.addEventListener('change', toggleSecond);
+      toggleSecond(); // set initial state
+    });
+  ")),
+      
+      div(
+        tags$div(
+          style = "font-weight: bold; margin-bottom: 4px; padding-left: 2px;",
+          "Visa avvikelse från referensintervall"
+        ),
+        div(
+          style = "display: flex; gap: 10px; align-items: center; margin-left: 3px;",
+          tags$div(style = "margin: 0;", checkboxInput("add_shapes", "Ja", value = FALSE)),
+          tags$div(style = "margin: 0;", checkboxInput("only_flanks", "Enbart vid 'Mycket högre/lägre än normalt'", value = FALSE))
+        )
+      ),
       uiOutput("year_ui"),
       selectInput("month", "Välj månad", choices = setNames(1:12, str_to_sentence(month_names_sv)), selected = 1),
       selectInput(
@@ -68,7 +94,7 @@ ui <- fluidPage(
         )
       ),
       downloadButton("download_all_plots_pdf", "Ladda ner månadsrapport (PDF)"),
-    width = 3),
+      width = 3),
     mainPanel(
       plotOutput("map_plot", height = "800px")
     )
@@ -204,7 +230,7 @@ server <- function(input, output, session) {
   data_joined <- reactive({
     req(uploaded_data(), input$year, input$month, input$parameter)
     prepare_joined_data(uploaded_data(), input$parameter, input$year, input$month,
-                        selected_stats(), all_anomalies)
+                        selected_stats(), all_anomalies, input$only_flanks)
   })
   
   # Define the reactive output for rendering the map plot

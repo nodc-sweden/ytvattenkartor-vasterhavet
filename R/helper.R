@@ -27,7 +27,7 @@ read_image_as_grob <- function(path, height_inches = 1) {
 }
 
 # Helper: join uploaded data with stats and add anomalies
-prepare_joined_data <- function(data, param, year, selected_month, stats_tidy, all_anomalies) {
+prepare_joined_data <- function(data, param, year, selected_month, stats_tidy, all_anomalies, only_flanks) {
   # Filter year/month
   df_filtered <- data %>%
     filter(Year == year, `Month (calc)` == selected_month)
@@ -110,11 +110,22 @@ prepare_joined_data <- function(data, param, year, selected_month, stats_tidy, a
         is.na(mean) ~ "Saknar referensvärde"
       ),
       anomaly_swe = factor(anomaly_swe, levels = all_anomalies),
-      extreme = factor(case_when(
-        value < min ~ "Under minimum",
-        value > max ~ "Över maximum",
-        TRUE ~ "Inom normalspann"
-      ), levels = c("Över maximum", "Inom normalspann", "Under minimum")),
+      extreme = factor(
+        if (only_flanks) {
+          case_when(
+            value < min & anomaly_swe == "Mycket lägre än normalt" ~ "Under minimum",
+            value > max & anomaly_swe == "Mycket högre än normalt" ~ "Över maximum",
+            TRUE ~ "Inom normalspann"
+          )
+        } else {
+          case_when(
+            value < min ~ "Under minimum",
+            value > max ~ "Över maximum",
+            TRUE ~ "Inom normalspann"
+          )
+        },
+        levels = c("Över maximum", "Inom normalspann", "Under minimum")
+      ),
       combined_label = paste0(Station, "\n", round(value, 2))
     )
   
