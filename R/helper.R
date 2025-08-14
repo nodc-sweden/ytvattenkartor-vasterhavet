@@ -138,8 +138,8 @@ prepare_joined_data <- function(data, param, year, selected_month, stats_tidy, a
 save_param_plot <- function(param, year, month, data, stats_tidy, all_anomalies,
                             anomaly_colors_swe, month_names_sv, parameter_map,
                             bbox_option, plot_width, plot_height, out_path, add_shapes,
-                            reference_data) {
-  joined <- prepare_joined_data(data, param, year, month, stats_tidy, all_anomalies)
+                            reference_data, only_flanks) {
+  joined <- prepare_joined_data(data, param, year, month, stats_tidy, all_anomalies, only_flanks)
   if (is.null(joined)) return(NULL)
   
   ggsave(
@@ -165,8 +165,9 @@ save_param_plot <- function(param, year, month, data, stats_tidy, all_anomalies,
 # Return a ggplot for a given parameter (or NULL if no data)
 create_plot_for_param <- function(param, year, month, data, stats_tidy,
                                   all_anomalies, anomaly_colors_swe, month_names_sv, parameter_map,
-                                  bbox_option, plot_width, plot_height, add_shapes, reference_data) {
-  joined <- prepare_joined_data(data, param, year, month, stats_tidy, all_anomalies)
+                                  bbox_option, plot_width, plot_height, add_shapes, reference_data,
+                                  only_flanks) {
+  joined <- prepare_joined_data(data, param, year, month, stats_tidy, all_anomalies, only_flanks)
   if (is.null(joined)) return(NULL)
   
   p <- create_plot(joined, list(
