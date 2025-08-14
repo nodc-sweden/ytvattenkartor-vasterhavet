@@ -109,11 +109,11 @@ stats <- shark_clean %>%
   group_by(station, parameter_id, std_depth, month) %>%
   summarise(
     n     = sum(!is.na(value)),
-    mean  = ifelse(n > 2, mean(value, na.rm = TRUE), NA_real_),
-    std   = ifelse(n > 2, sd(value, na.rm = TRUE), NA_real_),
-    `2std`= ifelse(n > 2, 2 * sd(value, na.rm = TRUE), NA_real_),
-    min   = ifelse(n > 2, min(value, na.rm = TRUE), NA_real_),
-    max   = ifelse(n > 2, max(value, na.rm = TRUE), NA_real_),
+    mean  = ifelse(n > 3, mean(value, na.rm = TRUE), NA_real_),
+    std   = ifelse(n > 3, sd(value, na.rm = TRUE), NA_real_),
+    `2std`= ifelse(n > 3, 2 * sd(value, na.rm = TRUE), NA_real_),
+    min   = ifelse(n > 3, min(value, na.rm = TRUE), NA_real_),
+    max   = ifelse(n > 3, max(value, na.rm = TRUE), NA_real_),
     .groups = "drop"
   ) %>%
   # Drop entire depth/param rows where all 12 months are NA
