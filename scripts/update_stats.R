@@ -7,8 +7,8 @@ library(purrr)
 source(file.path("R", "load_data.R"))
 
 # Define year interval
-to_year = 2024
-from_year <- to_year-9
+to_year = as.integer(format(Sys.Date(), "%Y")) - 1 # Previous calendar year, or a specific year, e.g. 2016
+from_year <- to_year - 9                           # 10 year interval
 
 # Stations to download
 station_names <- read_lines(file.path("data", "map_info", "station_names.txt"))
@@ -139,9 +139,12 @@ saveRDS(stats_list, file.path("data", "reference_data", "reference_data.rds"))
 out_dir <- file.path("data", "reference_data", "txt")
 dir.create(out_dir, showWarnings = FALSE)
 
-# Loop and write each data frame to a separate text file
+# Loop and write each data frame to a separate text file (for viewing)
 purrr::walk2(
   stats_list,
   names(stats_list),
   ~ write_tsv(.x, file.path(out_dir, paste0(.y, ".txt")), progress = FALSE)
 )
+
+# Alternatively, plot the stats as time series
+# source(file.path("scripts", "plot_stats.R"))

@@ -64,6 +64,27 @@ Or click **Run App** in RStudio.
 - **Uploaded file**: Export from SHARKtoolbox, for InfoC in `.txt` format (tab-separated), encoded in ISO-8859-1 (latin1).
 - Must include columns like `Year`, `Month (calc)`, `Lat`, `Lon`, `Depth`, `Station`, and selected parameters (e.g., `Temp CTD (prio CTD)`).
 
+## 🔄 Updating Reference Data
+
+The app uses pre-calculated reference datasets in `data/reference_data/` to compare uploaded measurements with historical statistics. These datasets are downloaded from [SHARK](https://shark.smhi.se/) using the `scripts/update_stats.R` script.
+
+**To update:**
+
+1. Run in R:  
+   `source("scripts/update_stats.R")`
+2. This downloads SHARK data, cleans and processes it, and saves:  
+   - `data/reference_data/reference_data.rds`  
+   - `data/reference_data/txt/<year_range>.txt`
+3. Commit the updated `data/reference_data/reference_data.rds` file:  
+   `git add data/reference_data/reference_data.rds && git commit -m "Update reference data" && git push`
+
+**Notes:**  
+
+- Adjust `from_year` and `to_year` in the script if needed. 
+- `scripts/update_stats.R` requires `SHARK4R`. See https://github.com/sharksmhi/SHARK4R for installation instructions.
+- The reference data can be visualized using `scripts/plot_stats.R`
+- The app does not fetch SHARK data automatically—updates must be committed before deployment to be selectable in the app.
+
 ## 📤 Exports
 
 - **PNG**: Download the currently displayed plot.
