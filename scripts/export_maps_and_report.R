@@ -11,7 +11,6 @@ library(readr)
 library(purrr)
 library(tibble)
 library(sf)
-library(R.matlab)
 library(ggrepel)
 library(png)
 library(jpeg)
@@ -30,12 +29,15 @@ output_dir <- "output"                   # Output folder for PNGs/PDF
 plots_dir <- file.path(output_dir, "plots")
 year <- 2025
 month <- 5
+reference_data <- "2007-2016"
 bbox_option <- "Bohuslän och Halland"    # "Bohuslän", "Halland", ...
 plot_width <- 15                         # cm
 plot_height <- 20                        # cm
 include_logo_smhi <- TRUE
 include_logo_bvvf <- TRUE
 include_logo_lans <- TRUE
+add_shapes <- FALSE
+only_flanks <- FALSE
 
 # Create output directory
 dir.create(plots_dir, showWarnings = FALSE, recursive = TRUE)
@@ -71,6 +73,9 @@ data_upload <- data_upload %>%
 data_upload$lat <- convert_dmm_to_dd(as.numeric(data_upload$Lat))
 data_upload$lon <- convert_dmm_to_dd(as.numeric(data_upload$Lon))
 
+# Select reference dataset
+stats_tidy <- stats_list[[reference_data]]
+
 # ==== GENERATE PNG PLOTS FOR ALL PARAMETERS ====
 png_files <- c()
 for (param in parameter_map$parameter_name) {
@@ -93,7 +98,10 @@ for (param in parameter_map$parameter_name) {
     bbox_option = bbox_option,
     plot_width = plot_width,
     plot_height = plot_height,
-    out_path = file_path
+    out_path = file_path,
+    add_shapes = add_shapes,
+    reference_data = reference_data, 
+    only_flanks = only_flanks
   )
   
   if (!is.null(file_saved)) png_files <- c(png_files, file_saved)
@@ -136,7 +144,10 @@ for (param in parameter_map$parameter_name) {
     parameter_map = parameter_map,
     bbox_option = bbox_option,
     plot_width = plot_width,
-    plot_height = plot_height
+    plot_height = plot_height,
+    add_shapes = add_shapes, 
+    reference_data = reference_data,
+    only_flanks = only_flanks
   )
   
   if (!is.null(p)) plots[[length(plots) + 1]] <- p

@@ -305,7 +305,7 @@ server <- function(input, output, session) {
   # Define the download handler for downloading all plots for the selection as a PDF report (including a logo page)
   output$download_all_plots_pdf <- downloadHandler(
     filename = function() {
-      paste0("plots_", input$year, "_", input$month, ".pdf")
+      paste0("Ytvattenkartor ", input$bbox_option, " ", month_names_sv[as.integer(input$month)], ".pdf")
     },
     content = function(pdf_file) {
       df_orig <- uploaded_data()
