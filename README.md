@@ -13,6 +13,7 @@ This repository contains a [Shiny web application](https://nodc-sweden.shinyapps
   - Plot size and aesthetics
 - Calculates DIN from NO₂, NO₃, and NH₄
 - Compares measurements to historical statistics (e.g., 2007-2016)
+- Visualize historical statistics
 - Uses values from specific depths:
   - **Surface values (0 m)** are used for all parameters except for **oxygen concentration**
   - **Bottom values** are used for **oxygen concentration** to capture deep-water conditions
@@ -31,7 +32,7 @@ This repository contains a [Shiny web application](https://nodc-sweden.shinyapps
 Clone this repository and install required R packages:
 
 ```r
-install.packages(c("shiny", "tidyverse", "sf", "R.matlab", "ggrepel", "png", "tiff", "jpeg", "grid", "gridExtra", "ggpubr"))
+install.packages(c("shiny", "tidyverse", "sf", "R.matlab", "ggrepel", "png", "tiff", "jpeg", "grid", "gridExtra", "ggpubr", "plotly"))
 ```
 
 ## 🚀 Running the App

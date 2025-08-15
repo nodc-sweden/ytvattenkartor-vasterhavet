@@ -22,6 +22,7 @@ library(tiff)
 library(grid)
 library(gridExtra)
 library(ggpubr)
+library(plotly)
 
 # Load helper functions and data
 source(file.path("R", "helper.R"))
@@ -30,77 +31,101 @@ source(file.path("R", "load_data.R"))
 # Define UI for application
 ui <- fluidPage(
   titlePanel("Ytvattenkartor för Infocentralen Västerhavet"),
-  sidebarLayout(
-    sidebarPanel(
-      fileInput("data_file", "Ladda upp InfoC-export (.txt)", accept = ".txt"),
-      uiOutput("reference_data_ui"),
-      # checkboxInput("add_shapes", "Visa avvikelse från referensintervall", value = FALSE),
-      tags$script(HTML("
-    document.addEventListener('DOMContentLoaded', function() {
-      const firstBox = document.getElementById('add_shapes');
-      const secondBox = document.getElementById('only_flanks');
-
-      function toggleSecond() {
-        secondBox.disabled = !firstBox.checked;
-        if (!firstBox.checked) secondBox.checked = false;
-      }
-
-      firstBox.addEventListener('change', toggleSecond);
-      toggleSecond(); // set initial state
-    });
-  ")),
-      
-      div(
-        tags$div(
-          style = "font-weight: bold; margin-bottom: 4px; padding-left: 2px;",
-          "Visa avvikelse från referensintervall"
-        ),
-        div(
-          style = "display: flex; gap: 10px; align-items: center; margin-left: 3px;",
-          tags$div(style = "margin: 0;", checkboxInput("add_shapes", "Ja", value = FALSE)),
-          tags$div(style = "margin: 0;", checkboxInput("only_flanks", "Enbart vid 'Mycket högre/lägre än normalt'", value = FALSE))
-        )
-      ),
-      uiOutput("year_ui"),
-      selectInput("month", "Välj månad", choices = setNames(1:12, str_to_sentence(month_names_sv)), selected = 1),
-      selectInput(
-        "parameter",
-        "Välj parameter",
-        choices = setNames(
-          parameter_map$parameter_name[-5][order(parameter_map$parameter_name_short[-5])],
-          sort(parameter_map$parameter_name_short[-5])
-        ),
-        selected = "Chla"
-      ),
-      selectInput("bbox_option", "Välj kartutbredning", choices = c(
-        "Bohuslän", "Halland", "Bohuslän och Halland", "Dynamisk"
-      ), selected = "Bohuslän och Halland"),
-      numericInput("plot_width", "Plotbredd, nedladdning (cm)", value = 15, min = 10, max = 100, step = 1),
-      numericInput("plot_height", "Plothöjd, nedladdning (cm)", value = 20, min = 10, max = 100, step = 1),
-      downloadButton("download_current_png", "Ladda ner aktuell plot (PNG)"),
-      br(), br(),
-      downloadButton("download_all_plots_zip", "Ladda ner plottar för alla parametrar (ZIP)"),
-      br(), br(),
-      div(
-        tags$div(
-          style = "font-weight: bold; margin-bottom: 4px; padding-left: 2px;",
-          "Inkludera logos i månadsrapport"
-        ),
-        div(
-          style = "display: flex; gap: 10px; align-items: center; margin-left: 3px;",
-          tags$div(style = "margin: 0;", checkboxInput("include_logo_smhi", "SMHI", value = TRUE)),
-          tags$div(style = "margin: 0;", checkboxInput("include_logo_bvvf", "BVVF", value = TRUE)),
-          tags$div(style = "margin: 0;", checkboxInput("include_logo_lans", "NLST", value = TRUE))
-        )
-      ),
-      downloadButton("download_all_plots_pdf", "Ladda ner månadsrapport (PDF)"),
-      width = 3),
-    mainPanel(
-      plotOutput("map_plot", height = "800px")
+  
+  tabsetPanel(
+    tabPanel("Karta",
+             sidebarLayout(
+               sidebarPanel(
+                 fileInput("data_file", "Ladda upp InfoC-export (.txt)", accept = ".txt"),
+                 uiOutput("reference_data_ui"),
+                 # Checkbox styling from your current code...
+                 div(
+                   tags$div(
+                     style = "font-weight: bold; margin-bottom: 4px; padding-left: 2px;",
+                     "Visa avvikelse från referensintervall"
+                   ),
+                   div(
+                     style = "display: flex; gap: 10px; align-items: center; margin-left: 3px;",
+                     tags$div(style = "margin: 0;", checkboxInput("add_shapes", "Ja", value = FALSE)),
+                     tags$div(style = "margin: 0;", checkboxInput("only_flanks", "Enbart vid 'Mycket högre/lägre än normalt'", value = FALSE))
+                   )
+                 ),
+                 uiOutput("year_ui"),
+                 selectInput("month", "Välj månad", choices = setNames(1:12, str_to_sentence(month_names_sv)), selected = 1),
+                 selectInput(
+                   "parameter",
+                   "Välj parameter",
+                   choices = setNames(
+                     parameter_map$parameter_name[-5][order(parameter_map$parameter_name_short[-5])],
+                     sort(parameter_map$parameter_name_short[-5])
+                   ),
+                   selected = "Chla"
+                 ),
+                 selectInput("bbox_option", "Välj kartutbredning", choices = c(
+                   "Bohuslän", "Halland", "Bohuslän och Halland", "Dynamisk"
+                 ), selected = "Bohuslän och Halland"),
+                 numericInput("plot_width", "Plotbredd, nedladdning (cm)", value = 15, min = 10, max = 100, step = 1),
+                 numericInput("plot_height", "Plothöjd, nedladdning (cm)", value = 20, min = 10, max = 100, step = 1),
+                 downloadButton("download_current_png", "Ladda ner aktuell plot (PNG)"),
+                 br(), br(),
+                 downloadButton("download_all_plots_zip", "Ladda ner plottar för alla parametrar (ZIP)"),
+                 br(), br(),
+                 div(
+                   tags$div(
+                     style = "font-weight: bold; margin-bottom: 4px; padding-left: 2px;",
+                     "Inkludera logos i månadsrapport"
+                   ),
+                   div(
+                     style = "display: flex; gap: 10px; align-items: center; margin-left: 3px;",
+                     tags$div(style = "margin: 0;", checkboxInput("include_logo_smhi", "SMHI", value = TRUE)),
+                     tags$div(style = "margin: 0;", checkboxInput("include_logo_bvvf", "BVVF", value = TRUE)),
+                     tags$div(style = "margin: 0;", checkboxInput("include_logo_lans", "NLST", value = TRUE))
+                   )
+                 ),
+                 downloadButton("download_all_plots_pdf", "Ladda ner månadsrapport (PDF)"),
+                 width = 3
+               ),
+               mainPanel(
+                 plotOutput("map_plot", height = "800px")
+               )
+             )
+    ),
+    
+    tabPanel("Referensdata",
+             sidebarLayout(
+               sidebarPanel(
+                 selectInput(
+                   "ref_param",
+                   "Välj parameter",
+                   choices = sort(
+                     setdiff(
+                       unique(unlist(lapply(stats_list, function(df) unique(df$parameter_name_short)))),
+                       "H2S"  # remove this from the choices
+                     )
+                   ),
+                   selected = "Chla"
+                 ),
+                 selectInput(
+                   "ref_dataset",
+                   "Välj dataset",
+                   choices = names(stats_list),
+                   selected = names(stats_list)[1]
+                 ),
+                 selectInput(
+                   "ref_station",
+                   "Välj station",
+                   choices = sort(all_stations),  # all stations, not just those with data
+                   selected = sort(all_stations)[1]  # optional: select first station by default
+                 ),
+                 width = 3
+               ),
+               mainPanel(
+                 plotlyOutput("ref_plot", height = "800px")
+               )
+             )
     )
   ),
   
-  # Footer
   tags$hr(),
   tags$footer(
     style = "text-align:center; padding:10px; font-size:0.9em; color:#666;",
@@ -109,7 +134,8 @@ ui <- fluidPage(
         "Version ", pkg_version, " – ",
         "<a href='", github_url, "' target='_blank'>GitHub repository</a>"
       )
-    ))
+    )
+  )
 )
 
 server <- function(input, output, session) {
@@ -386,6 +412,86 @@ server <- function(input, output, session) {
       dev.off()
     }
   )
+  
+  # Populate station dropdown when dataset or parameter changes
+  observeEvent(list(input$ref_dataset, input$ref_param), {
+    df <- stats_list[[input$ref_dataset]]
+    stations <- sort(unique(df$station[df$parameter_name_short == input$ref_param]))
+  })
+  
+  # Render reference data plot
+  output$ref_plot <- renderPlotly({
+    req(input$ref_dataset, input$ref_param, input$ref_station)
+    
+    # Filter the dataset for the selected parameter and station
+    df <- stats_list[[input$ref_dataset]] %>%
+      filter(parameter_name_short == input$ref_param,
+             station == input$ref_station)
+    
+    # Select the relevant depth:
+    # - If the parameter is "Syre" (oxygen), pick the maximum depth with valid mean values
+    # - Otherwise, use surface (depth == 0)
+    df <- df %>%
+      group_by(station, parameter_name_short, month) %>%
+      filter(
+        if (!is.na(first(parameter_name_short)) &&
+            first(parameter_name_short) == "Syre") {
+          depth == max(depth[is.finite(mean)], na.rm = TRUE)
+        } else {
+          depth == 0
+        }
+      ) %>%
+      ungroup()
+    
+    # Handle case when no data is available for the selection
+    if (is.null(df) || nrow(df) == 0) {
+      p <- ggplot() +
+        annotate("text", x = 0.5, y = 0.5,
+                 label = "Ingen data tillgänglig för vald parameter, dataset och station.",
+                 size = 6, hjust = 0.5) +
+        theme_void()
+      return(ggplotly(p))
+    } else {
+      
+      # Create hover text for plotly tooltips
+      df <- df %>%
+        dplyr::mutate(
+          hover_mean = paste0("Månad: ", str_to_sentence(month_names_sv)[month],
+                              "<br>Medel: ", round(mean, 2),
+                              "<br>Std: ", round(std, 2)),
+          hover_min = paste0("Månad: ", str_to_sentence(month_names_sv)[month],
+                             "<br>Min: ", round(min, 2)),
+          hover_max = paste0("Månad: ", str_to_sentence(month_names_sv)[month],
+                             "<br>Max: ", round(max, 2))
+        )
+      
+      # Compute depth range for title annotation
+      depth <- range(df$depth)
+      depth <- paste(unique(depth), collapse = "-")
+      
+      suppressWarnings({
+        # Build ggplot
+        p <- ggplot(df, aes(x = month)) +
+          geom_line(aes(y = mean, colour = "Mean", group = 1, text = hover_mean), size = 1) +
+          geom_point(aes(y = mean, colour = "Mean", text = hover_mean), alpha = 0) +
+          geom_ribbon(aes(ymin = mean - std, ymax = mean + std, fill = "±1 SD"), alpha = 0.2) +
+          geom_ribbon(aes(ymin = mean - `2std`, ymax = mean + `2std`, fill = "±2 SD"), alpha = 0.1) +
+          geom_point(aes(y = min, shape = "Min", text = hover_min), size = 3) +
+          geom_point(aes(y = max, shape = "Max", text = hover_max), size = 3) +
+          scale_shape_manual(values = c("Min" = 25, "Max" = 24)) +
+          labs(
+            title = paste0(input$ref_param, " (", input$ref_dataset, ")", ", ", depth, " m"),
+            x = "Månad",
+            y = paste0("Värde (", unique(df$parameter_unit), ")")
+          ) +
+          theme_minimal() +
+          theme(legend.position = "right")
+      })
+      
+      # Convert to interactive plotly plot with custom tooltips
+      ggplotly(p, tooltip = "text")
+    }
+  })
 }
 
 shinyApp(ui, server)
