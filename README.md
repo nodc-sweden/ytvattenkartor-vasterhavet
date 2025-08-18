@@ -1,10 +1,10 @@
 # Surface water maps for the Västerhavet Info Centre
 
-This repository contains a [Shiny web application](https://nodc-sweden.shinyapps.io/ytvattenkartor/) that provides interactive mapping and visualization of surface water anomalies in the Västerhavet region, based on data exported for the Västerhavet Info Centre. The app allows users to upload data, select parameters, and generate customized maps based on historical statistics.
+This Shiny web application provides interactive mapping and visualization of surface water anomalies in the Västerhavet region, based on data exported for the Västerhavet Info Centre using the `SHARKtoolbox`. The app allows users to upload data, select parameters, and generate customized maps based on historical statistics.
 
 ## ✨ Features
 
-- Upload `.txt` files from a InfoC export from **SHARKtoolbox**
+- Upload `.txt` files from a InfoC export from `SHARKtoolbox`
 - Dynamic selection of:
   - Reference dataset
   - Year and month
@@ -21,17 +21,17 @@ This repository contains a [Shiny web application](https://nodc-sweden.shinyapps
   - Current plot as PNG
   - All parameter plots for the current month as a ZIP archive
   - Monthly reports as a PDF
-
-### Screenshot
-
-![Screenshot of the app](assets/screenshot.png)
+- Update and explore historical statistics in an interactive interface
 
 ## 📦 Installation
 
-Clone this repository and install required R packages:
+To install the app on your local machine, clone [this repository](https://github.com/nodc-sweden/ytvattenkartor-vasterhavet) and install required R packages:
 
 ```r
-install.packages(c("shiny", "tidyverse", "sf", "R.matlab", "ggrepel", "png", "tiff", "jpeg", "grid", "gridExtra", "ggpubr"))
+install.packages(c("shiny", "tidyverse", "sf", "R.matlab", "ggrepel", 
+                   "png", "tiff", "jpeg", "grid", "gridExtra", "ggpubr", 
+                   "plotly", "DT", "remotes", "markdown"))
+remotes::install_github("sharksmhi/SHARK4R")  # Required for updating reference data
 ```
 
 ## 🚀 Running the App
@@ -50,7 +50,7 @@ Or click **Run App** in RStudio.
 .
 ├── R/
 │   ├── helper.R             # Contains helper functions like create_plot(), convert_dmm_to_dd() etc.
-│   └── load_data.R          # Loads station reference statistics from file, defines parameter metadata, anomaly categories, colors, and month names
+│   └── load_data.R          # Loads station names from file, defines parameter metadata, anomaly categories, colors, and month names
 ├── assets/                  # Contains logos and images used by the app
 ├── data/                    # Contains data, such as map layers and reference data
 ├── scripts/                 # Misc scripts not directly used by app, but used for pre-processing data (e.g. updating reference datasets)
@@ -61,40 +61,52 @@ Or click **Run App** in RStudio.
 
 ## 📄 Data Requirements
 
-- **Uploaded file**: Export from SHARKtoolbox, for InfoC in `.txt` format (tab-separated), encoded in ISO-8859-1 (latin1).
+- **Uploaded file**: Export from `SHARKtoolbox`, for InfoC in `.txt` format (tab-separated), encoded in ISO-8859-1 (latin1).
 - Must include columns like `Year`, `Month (calc)`, `Lat`, `Lon`, `Depth`, `Station`, and selected parameters (e.g., `Temp CTD (prio CTD)`).
 
 ## 🔄 Updating Reference Data
 
-The app uses pre-calculated reference datasets in `data/reference_data/` to compare uploaded measurements with historical statistics. These datasets are downloaded from [SHARK](https://shark.smhi.se/) using the `scripts/update_stats.R` script.
+The app uses pre-calculated reference datasets in `data/reference_data/reference_data.rds` to compare uploaded measurements with historical statistics. These datasets are based on [SHARK](https://shark.smhi.se/) data (except for the dataset 2007-2016, which is derived from the superseded MATLAB code and available in `data/reference_data/stat_stations.mat`) and can be updated in **two ways**:
 
-**To update:**
+### Option 1: Update from within the app
+
+1. Open the app and navigate to **Uppdatera referensdata**.  
+2. Select:  
+   - End year (`Uppdatera till och med år`)  
+   - Time span in years (`Tidsspann`)  
+   - Minimum number of observations required for a station–month–depth–variable combination to be included in the reference dataset (`Minst antal mätningar`)  
+3. Click **“Uppdatera referensdata”**.  
+   - The app will download fresh data from SHARK, recalculate the statistics, and update `data/reference_data/reference_data.rds`.  
+   - A summary table of the updated datasets will be shown in the app.  
+
+> ⚠️Changes made here overwrite the local `reference_data.rds`.
+> - If the app is running **locally**, commit the updated file to version control before deployment (see below).  
+> - If the app is running on **shinyapps.io**, the updated file will only persist for the current session and will be lost once the app is restarted. To make changes permanent, update the reference data locally and redeploy the app.  
+
+### Option 2: Update manually via script
+You can also run the standalone script if you prefer:
 
 1. Run in R:  
    `source("scripts/update_stats.R")`
+
 2. This downloads SHARK data, cleans and processes it, and saves:  
    - `data/reference_data/reference_data.rds`  
-   - `data/reference_data/txt/<year_range>.txt`
-3. Commit the updated `data/reference_data/reference_data.rds` file:  
-   `git add data/reference_data/reference_data.rds && git commit -m "Update reference data" && git push`
+   - `data/reference_data/txt/<year_range>.txt`  
 
-**Notes:**  
+3. Commit the updated `reference_data.rds` file:  
+   `git add data/reference_data/reference_data.rds`
+   `git commit -m "Update reference data"`  
+   `git push`
 
-- Adjust `from_year` and `to_year` in the script if needed. 
-- `scripts/update_stats.R` requires `SHARK4R`. See https://github.com/sharksmhi/SHARK4R for installation instructions.
-- The reference data can be visualized using `scripts/plot_stats.R`
-- The app does not fetch SHARK data automatically—updates must be committed before deployment to be selectable in the app.
-
-## 📤 Exports
-
-- **PNG**: Download the currently displayed plot.
-- **ZIP**: Download all parameter plots for the selected year and month.
-- **PDF**: Download all parameter plots for the selected year and month in a PDF, including a logo page.
+### Notes
+- Both methods require the [SHARK4R](https://github.com/sharksmhi/SHARK4R) package.  
+- The reference data can be explored interactively in the **Utforska referensdata** tab or visualized with `scripts/plot_stats.R`.  
+- When deploying the app to [shinyapps.io](https://https://www.shinyapps.io/) (see below), ensure the updated `data/reference_data/reference_data.rds` is committed, since the deployed app cannot store fetched SHARK data on the server.  
 
 ## 🚢 Deployment
 
 This repository uses **GitHub Actions** to automatically deploy the latest version of the app to [shinyapps.io](https://https://www.shinyapps.io/) or its test environment.  
-The deployment is configured in the [`.github/workflows/shinyapps.yaml`](.github/workflows/shinyapps.yaml) file.
+The deployment is configured in the [`.github/workflows/shinyapps.yaml`](https://github.com/nodc-sweden/ytvattenkartor-vasterhavet/blob/2f548ea55eed652880b28fcca521b299c71bdc44/.github/workflows/shinyapps.yaml) file.
 
 ### 🔁 Workflow Overview
 

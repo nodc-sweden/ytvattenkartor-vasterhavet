@@ -61,5 +61,8 @@ anomaly_colors_swe <- c(
 month_names_sv <- c("januari", "februari", "mars", "april", "maj", "juni",
                     "juli", "augusti", "september", "oktober", "november", "december")
 
-# Read the reference data (stats_list) from the RDS file
-stats_list <- readRDS(file.path("data", "reference_data", "reference_data.rds"))
+# Stations to downloaded from SHARK
+station_names <- read_lines(file.path("data", "config", "station_names.txt"))
+
+# Stations to downloaded from SHARK
+platform_codes <- read_lines(file.path("data", "config", "platform_codes.txt"))
