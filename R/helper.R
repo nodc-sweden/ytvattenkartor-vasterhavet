@@ -467,7 +467,7 @@ update_stats <- function(to_year, time_range, stats_list, station_names, paramet
     standard_depth[which.min(abs(standard_depth - depth))]
   }
   
-  # Apply without rowwise()
+  # Apply function
   shark_clean <- shark_clean %>%
     mutate(std_depth = sapply(depth, depth_lookup))
   

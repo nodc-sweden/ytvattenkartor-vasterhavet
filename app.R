@@ -42,7 +42,6 @@ ui <- fluidPage(
                sidebarPanel(
                  fileInput("data_file", "Ladda upp InfoC-export (.txt)", accept = ".txt", placeholder = "t.ex. BH_19_21_2025-05-27.txt"),
                  uiOutput("reference_data_ui"),
-                 # Checkbox styling from your current code...
                  div(
                    tags$div(
                      style = "font-weight: bold; margin-bottom: 4px; padding-left: 2px;",
@@ -112,7 +111,6 @@ ui <- fluidPage(
     tabPanel("Uppdatera referensdata",
              sidebarLayout(
                sidebarPanel(
-                 # These inputs are dynamic because stats_list is reactive
                  numericInput("to_year", "Uppdatera till och med år:", value = as.integer(format(Sys.Date(), "%Y")) - 1),
                  numericInput("time_range", "Tidsspann (år):", value = 10, min = 1),
                  numericInput("min_n", "Minsta antal mätningar för medelvärde:", value = 3, min = 1),
@@ -230,7 +228,7 @@ server <- function(input, output, session) {
     selectInput("ref_station", "Välj station", choices = stations, selected = stations[1])
   })
   
-  # Access the chosen dataframe like this (reactive)
+  # Access the chosen dataframe
   selected_stats <- reactive({
     req(input$reference_data)
     stats_list()[[input$reference_data]]
