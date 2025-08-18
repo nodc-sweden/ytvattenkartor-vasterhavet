@@ -124,7 +124,7 @@ ui <- fluidPage(
                )
              )
     ),
-    tabPanel("Om",
+    tabPanel("README",
              fluidRow(
                column(
                  width = 10, offset = 1,
