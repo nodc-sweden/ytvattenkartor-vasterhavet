@@ -40,7 +40,7 @@ ui <- fluidPage(
     tabPanel("Kartdiagram",
              sidebarLayout(
                sidebarPanel(
-                 fileInput("data_file", "Ladda upp InfoC-export (.txt)", accept = ".txt"),
+                 fileInput("data_file", "Ladda upp InfoC-export (.txt)", accept = ".txt", placeholder = "t.ex. BH_19_21_2025-05-27.txt"),
                  uiOutput("reference_data_ui"),
                  # Checkbox styling from your current code...
                  div(
