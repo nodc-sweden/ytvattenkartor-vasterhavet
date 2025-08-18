@@ -115,7 +115,7 @@ ui <- fluidPage(
                  # These inputs are dynamic because stats_list is reactive
                  numericInput("to_year", "Uppdatera till och med år:", value = as.integer(format(Sys.Date(), "%Y")) - 1),
                  numericInput("time_range", "Tidsspann (år):", value = 10, min = 1),
-                 numericInput("min_n", "Inkludera minst antal mätningar:", value = 3, min = 1),
+                 numericInput("min_n", "Minsta antal mätningar för medelvärde:", value = 3, min = 1),
                  checkboxGroupInput("platform_filter", "Välj plattformskoder:",
                                     choices = platform_codes,
                                     selected = platform_codes),
