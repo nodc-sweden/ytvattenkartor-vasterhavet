@@ -20,7 +20,7 @@ sw_coast <- st_intersection(coast, bbox_laea)
 
 sw_coast_wgs84 <- st_transform(sw_coast, 4326)
 
-st_write(sw_coast_wgs84, "data/EEA_Coastline_Polygon_Shape_Swedish_west_coast/Swedish_West_Coast_WGS84.shp", delete_layer = TRUE)
+st_write(sw_coast_wgs84, "data/shapefiles/EEA_Coastline_Polygon_Shape_Swedish_west_coast/Swedish_West_Coast_WGS84.shp", delete_layer = TRUE)
 
 
 
@@ -28,7 +28,7 @@ st_write(sw_coast_wgs84, "data/EEA_Coastline_Polygon_Shape_Swedish_west_coast/Sw
 ### NE Lakes
 
 # Load the full lakes dataset
-lakes <- st_read("data/ne_10m_lakes/ne_10m_lakes.shp", quiet = TRUE)
+lakes <- st_read("data/shapefiles/ne_10m_lakes/ne_10m_lakes.shp", quiet = TRUE)
 
 # Load Sweden geometry
 sweden <- ne_countries(scale = 10, country = "Sweden", returnclass = "sf")
@@ -38,4 +38,4 @@ lakes <- st_make_valid(lakes)
 lakes <- lakes[st_is_valid(lakes), ]
 sweden_lakes <- st_intersection(lakes, sweden)
 
-st_write(sweden_lakes, "data/ne_10m_lakes/sweden_lakes.shp", delete_layer = TRUE)
+st_write(sweden_lakes, "data/shapefiles/ne_10m_lakes/sweden_lakes.shp", delete_layer = TRUE)
