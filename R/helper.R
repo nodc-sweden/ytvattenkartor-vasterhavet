@@ -248,13 +248,13 @@ create_logo_page <- function(include_smhi, include_bvvf, include_lans, month, ye
 # Function to create a plot
 create_plot <- function(df, input, all_anomalies, anomaly_colors_swe, month_names_sv, parameter_map) {
   # Load spatial data: Swedish west coast polygon and filtered lakes in Sweden
-  sw_coast <- st_read("data/EEA_Coastline_Polygon_Shape_Swedish_west_coast/Swedish_West_Coast_WGS84.shp", quiet = TRUE)
-  lakes <- st_read("data/ne_10m_lakes/sweden_lakes.shp", quiet = TRUE)
+  sw_coast <- st_read("data/shapefiles/EEA_Coastline_Polygon_Shape_Swedish_west_coast/Swedish_West_Coast_WGS84.shp", quiet = TRUE)
+  lakes <- st_read("data/shapefiles/ne_10m_lakes/sweden_lakes.shp", quiet = TRUE)
   
   # Load additional map features: country border and rivers
-  border <- read_delim("data/map_info/gransen.txt", delim = "\t", col_names = c("lon", "lat"),
+  border <- read_delim("data/config/gransen.txt", delim = "\t", col_names = c("lon", "lat"),
                        col_types = cols(), progress = FALSE)
-  rivers <- read_delim("data/map_info/elver.txt", delim = "\t", col_names = c("lon", "lat"),
+  rivers <- read_delim("data/config/elver.txt", delim = "\t", col_names = c("lon", "lat"),
                        col_types = cols(), progress = FALSE)
   
   # Convert main data to spatial points for bounding box calculation
@@ -391,7 +391,7 @@ calculate_DIN <- function(NO2, NO3, NH4) {
   return(DIN)
 }
 
-update_stats <- function(to_year, time_range, stats_list, station_names, parameter_map, min_n) {
+update_stats <- function(to_year, time_range, stats_list, station_names, parameter_map, min_n, platform_filter) {
   # Calculate start and end years based on inputs
   start_year <- to_year - time_range + 1
   end_year <- to_year
@@ -406,6 +406,10 @@ update_stats <- function(to_year, time_range, stats_list, station_names, paramet
   
   # Rename specific stations for consistency with plotting/statistical datasets
   shark_data$station_name[shark_data$station_name == "KOSTERFJORDEN NR16"] <- "KOSTERFJORDEN (NR16)"
+  
+  # Filter selected platforms (ships)
+  shark_data <- shark_data %>%
+    filter(platform_code %in% platform_filter)
   
   # Store year ranges for each station in a data frame
   years_df <- shark_data %>%

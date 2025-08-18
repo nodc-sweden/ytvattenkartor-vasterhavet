@@ -16,7 +16,7 @@ time_range <- 10                                   # 10 year interval
 min_n <- 3
 
 # Update the stats using the helper function
-stats_list <- update_stats(to_year, time_range, stats_list, station_names, parameter_map, min_n)
+stats_list <- update_stats(to_year, time_range, stats_list, station_names, parameter_map, min_n, platform_codes)
 
 # Create output folder
 out_dir <- file.path("data", "reference_data", "txt")

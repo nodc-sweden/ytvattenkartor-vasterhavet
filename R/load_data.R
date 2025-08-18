@@ -62,4 +62,7 @@ month_names_sv <- c("januari", "februari", "mars", "april", "maj", "juni",
                     "juli", "augusti", "september", "oktober", "november", "december")
 
 # Stations to downloaded from SHARK
-station_names <- read_lines(file.path("data", "map_info", "station_names.txt"))
+station_names <- read_lines(file.path("data", "config", "station_names.txt"))
+
+# Stations to downloaded from SHARK
+platform_codes <- read_lines(file.path("data", "config", "platform_codes.txt"))

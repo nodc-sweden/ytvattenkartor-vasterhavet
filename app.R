@@ -116,6 +116,12 @@ ui <- fluidPage(
                  numericInput("to_year", "Uppdatera till och med år:", value = as.integer(format(Sys.Date(), "%Y")) - 1),
                  numericInput("time_range", "Tidsspann (år):", value = 10, min = 1),
                  numericInput("min_n", "Inkludera minst antal mätningar:", value = 3, min = 1),
+                 checkboxGroupInput("platform_filter", "Välj plattformskoder:",
+                                    choices = platform_codes,
+                                    selected = platform_codes),
+                 
+                 textInput("platform_custom", "Ange andra plattformskoder (separerade med komma-tecken):",
+                           placeholder = "t.ex. 77WX, 77K9"),
                  actionButton("update_ref", "Uppdatera referensdata"),
                  width = 3
                ),
@@ -543,8 +549,19 @@ server <- function(input, output, session) {
   observeEvent(input$update_ref, {
     showNotification("Uppdaterar referensdata...", type = "message", id = "update_ref_msg", duration = NULL)
     
+    # From checkboxes
+    selected_platforms <- input$platform_filter
+    
+    # From free text (split on commas or whitespace, trim spaces)
+    if (nzchar(input$platform_custom)) {
+      extra_codes <- unlist(strsplit(input$platform_custom, "[, ]+"))
+      extra_codes <- trimws(extra_codes)  # remove stray spaces
+      extra_codes <- extra_codes[nzchar(extra_codes)]  # drop empty
+      selected_platforms <- unique(c(selected_platforms, extra_codes))
+    }
+    
     tryCatch({
-      update_stats(input$to_year, input$time_range, stats_list(), station_names, parameter_map, input$min_n)
+      update_stats(input$to_year, input$time_range, stats_list(), station_names, parameter_map, input$min_n, selected_platforms)
       
       # Reload updated reference data
       updated_stats <- readRDS("data/reference_data/reference_data.rds")
@@ -572,7 +589,7 @@ server <- function(input, output, session) {
         Dataset = name,
         `Antal stationer` = n_distinct(df$station),
         `Antal parametrar` = n_distinct(df$parameter_id),
-        `Antal rader` = nrow(df),
+        `Antal medelvärden` = nrow(df),
         Källa = unique(df$source),
         `Senaste uppdatering` = unique(df$date_updated)
       )
