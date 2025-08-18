@@ -116,10 +116,10 @@ ui <- fluidPage(
                  numericInput("to_year", "Uppdatera till och med år:", value = as.integer(format(Sys.Date(), "%Y")) - 1),
                  numericInput("time_range", "Tidsspann (år):", value = 10, min = 1),
                  numericInput("min_n", "Minsta antal mätningar för medelvärde:", value = 3, min = 1),
-                 checkboxGroupInput("platform_filter", "Välj plattformskoder:",
+                 checkboxGroupInput("platform_filter", 
+                                    label = HTML('Välj plattformskoder (<a href="https://smhi.se/oceanografi/oce_info_data/shark_web/downloads/codelist_SMHI.xlsx" target="_blank">se aktuell lista här</a>):'),
                                     choices = platform_codes,
                                     selected = platform_codes),
-                 
                  textInput("platform_custom", "Ange andra plattformskoder (separerade med komma-tecken):",
                            placeholder = "t.ex. 77WX, 77K9"),
                  actionButton("update_ref", "Uppdatera referensdata"),
