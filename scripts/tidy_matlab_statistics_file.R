@@ -3,6 +3,9 @@ library(dplyr)
 library(purrr)
 library(tibble)
 
+# Load the parameter mapping from a separate R script
+source(file.path("R", "load_data.R"))
+
 # Read MATLAB .mat file containing statistical data
 mat <- readMat("data/reference_data/stat_stations.mat")
 
@@ -36,7 +39,8 @@ stats_tidy <- map_dfr(seq_len(dim(stat_array)[3]), function(station_index) {
       max = vals[,5]
     )
   })
-}) %>% left_join(parameter_map, by = "parameter_id")
+}) %>% left_join(parameter_map, by = "parameter_id") %>%
+  mutate(source = "MATLAB")
 
 # Fix spacing issue in one station name (data error correction)
 stats_tidy$station[stats_tidy$station == "L9  LAHOLMSBUKTEN"]   <- "L9 LAHOLMSBUKTEN"

@@ -9,6 +9,7 @@ Imports:
     stringr,
     readr,
     purrr,
+    tidyr,
     tibble,
     R.matlab,
     ggrepel,
@@ -19,4 +20,7 @@ Imports:
     grid,
     gridExtra,
     ggpubr,
+    DT,
+    SHARK4R,
+    markdown,
     plotly

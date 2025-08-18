@@ -23,8 +23,12 @@ library(grid)
 library(gridExtra)
 library(ggpubr)
 library(plotly)
+library(SHARK4R)
+library(DT)
+library(tidyr)
+library(markdown)
 
-# Load helper functions and data
+# Load helper functions and data (these define functions like prepare_joined_data, create_plot, etc.)
 source(file.path("R", "helper.R"))
 source(file.path("R", "load_data.R"))
 
@@ -33,7 +37,7 @@ ui <- fluidPage(
   titlePanel("Ytvattenkartor för Infocentralen Västerhavet"),
   
   tabsetPanel(
-    tabPanel("Karta",
+    tabPanel("Kartdiagram",
              sidebarLayout(
                sidebarPanel(
                  fileInput("data_file", "Ladda upp InfoC-export (.txt)", accept = ".txt"),
@@ -91,36 +95,40 @@ ui <- fluidPage(
              )
     ),
     
-    tabPanel("Referensdata",
+    tabPanel("Utforska referensdata",
              sidebarLayout(
                sidebarPanel(
-                 selectInput(
-                   "ref_param",
-                   "Välj parameter",
-                   choices = sort(
-                     setdiff(
-                       unique(unlist(lapply(stats_list, function(df) unique(df$parameter_name_short)))),
-                       "H2S"  # remove this from the choices
-                     )
-                   ),
-                   selected = "Chla"
-                 ),
-                 selectInput(
-                   "ref_dataset",
-                   "Välj dataset",
-                   choices = names(stats_list),
-                   selected = names(stats_list)[1]
-                 ),
-                 selectInput(
-                   "ref_station",
-                   "Välj station",
-                   choices = sort(all_stations),  # all stations, not just those with data
-                   selected = sort(all_stations)[1]  # optional: select first station by default
-                 ),
+                 # These inputs are dynamic because stats_list is reactive
+                 uiOutput("ref_param_ui"),
+                 uiOutput("ref_dataset_ui"),
+                 uiOutput("ref_station_ui"),
                  width = 3
                ),
                mainPanel(
                  plotlyOutput("ref_plot", height = "800px")
+               )
+             )
+    ),
+    tabPanel("Uppdatera referensdata",
+             sidebarLayout(
+               sidebarPanel(
+                 # These inputs are dynamic because stats_list is reactive
+                 numericInput("to_year", "Uppdatera till och med år:", value = as.integer(format(Sys.Date(), "%Y")) - 1),
+                 numericInput("time_range", "Tidsspann (år):", value = 10, min = 1),
+                 numericInput("min_n", "Inkludera minst antal mätningar:", value = 3, min = 1),
+                 actionButton("update_ref", "Uppdatera referensdata"),
+                 width = 3
+               ),
+               mainPanel(
+                 DT::dataTableOutput("ref_table")
+               )
+             )
+    ),
+    tabPanel("Om",
+             fluidRow(
+               column(
+                 width = 10, offset = 1,
+                 includeMarkdown("README.md")
                )
              )
     )
@@ -139,6 +147,10 @@ ui <- fluidPage(
 )
 
 server <- function(input, output, session) {
+  
+  stats_list <- reactiveVal(
+    readRDS(file.path("data", "reference_data", "reference_data.rds"))
+  )
   
   # Dynamically render a selectInput for available years based on uploaded data
   output$year_ui <- renderUI({
@@ -161,19 +173,61 @@ server <- function(input, output, session) {
     }
   })
   
-  # Example: if stats_list is preloaded in global environment
+  # Reference-data related UI: dataset / parameter / station
   output$reference_data_ui <- renderUI({
     selectInput(
       "reference_data",
       "Välj referensperiod",
-      choices = names(stats_list),
-      selected = names(stats_list)[1]
+      choices = names(stats_list()),
+      selected = names(stats_list())[1]
     )
   })
   
-  # Access the chosen dataframe like this:
+  output$ref_dataset_ui <- renderUI({
+    req(stats_list())
+    selectInput(
+      "ref_dataset",
+      "Välj dataset",
+      choices = names(stats_list()),
+      selected = names(stats_list())[1]
+    )
+  })
+  
+  output$ref_param_ui <- renderUI({
+    req(stats_list())
+    choices <- sort(
+      setdiff(
+        unique(unlist(lapply(stats_list(), function(df) unique(df$parameter_name_short)))),
+        "H2S"
+      )
+    )
+    selectInput("ref_param", "Välj parameter", choices = choices, selected = choices[1])
+  })
+  
+  output$ref_station_ui <- renderUI({
+    # Build station choices from selected dataset and parameter, fall back to all_stations
+    req(stats_list())
+    
+    all_stations <- sort(unique(unlist(lapply(stats_list(), function(df) df$station))))
+    
+    if (!is.null(input$ref_dataset) && input$ref_dataset %in% names(stats_list())) {
+      df <- stats_list()[[input$ref_dataset]]
+      if (!is.null(input$ref_param)) {
+        stations <- sort(unique(df$station[df$parameter_name_short == input$ref_param]))
+      } else {
+        stations <- sort(unique(df$station))
+      }
+      if (length(stations) == 0) stations <- sort(all_stations)
+    } else {
+      stations <- sort(all_stations)
+    }
+    selectInput("ref_station", "Välj station", choices = stations, selected = stations[1])
+  })
+  
+  # Access the chosen dataframe like this (reactive)
   selected_stats <- reactive({
-    stats_list[[input$reference_data]]
+    req(input$reference_data)
+    stats_list()[[input$reference_data]]
   })
   
   # Define a reactive expression to read and preprocess the uploaded data file
@@ -207,15 +261,7 @@ server <- function(input, output, session) {
     data_upload$`Month (calc)` <- as.numeric(data_upload$`Month (calc)`)
     
     # Calculate DIN
-    data_upload <- data_upload %>%
-      mutate(
-        NO2_fix = if_else(is.na(NO2), 0, NO2),
-        NO3_fix = if_else(is.na(NO3), 0, NO3),
-        NH4_fix = if_else(is.na(NH4), 0, NH4),
-        DIN_raw = NO2_fix + NO3_fix + NH4_fix,
-        DIN = if_else(DIN_raw == 0, NA_real_, DIN_raw)
-      ) %>%
-      select(-NO2_fix, -NO3_fix, -NH4_fix, -DIN_raw)
+    data_upload$DIN <- calculate_DIN(data_upload$NO2, data_upload$NO3, data_upload$NH4)
     
     # Convert lat/lon to decimal degrees
     data_upload$lat <- convert_dmm_to_dd(as.numeric(data_upload$Lat))
@@ -296,6 +342,8 @@ server <- function(input, output, session) {
     },
     # Function that creates the content of the ZIP file
     content = function(zipfile) {
+      nid <- showNotification("ZIP-generering startad. Detta kan ta några sekunder...", duration = NULL)
+      
       temp_dir <- tempdir()
       files <- c()
       
@@ -325,6 +373,7 @@ server <- function(input, output, session) {
       
       # Create a ZIP archive from all generated plot files
       utils::zip(zipfile, files = files, flags = "-j")
+      removeNotification(nid)
     }
   )
   
@@ -334,6 +383,8 @@ server <- function(input, output, session) {
       paste0("Ytvattenkartor ", input$bbox_option, " ", month_names_sv[as.integer(input$month)], ".pdf")
     },
     content = function(pdf_file) {
+      nid <- showNotification("PDF-generering startad. Detta kan ta några sekunder...", duration = NULL)
+      
       df_orig <- uploaded_data()
       temp_dir <- tempdir()
       plots <- list()
@@ -410,21 +461,16 @@ server <- function(input, output, session) {
       }
       
       dev.off()
+      removeNotification(nid)
     }
   )
   
-  # Populate station dropdown when dataset or parameter changes
-  observeEvent(list(input$ref_dataset, input$ref_param), {
-    df <- stats_list[[input$ref_dataset]]
-    stations <- sort(unique(df$station[df$parameter_name_short == input$ref_param]))
-  })
-  
   # Render reference data plot
   output$ref_plot <- renderPlotly({
-    req(input$ref_dataset, input$ref_param, input$ref_station)
+    req(input$ref_dataset, input$ref_param, input$ref_station, stats_list())
     
     # Filter the dataset for the selected parameter and station
-    df <- stats_list[[input$ref_dataset]] %>%
+    df <- stats_list()[[input$ref_dataset]] %>%
       filter(parameter_name_short == input$ref_param,
              station == input$ref_station)
     
@@ -491,6 +537,56 @@ server <- function(input, output, session) {
       # Convert to interactive plotly plot with custom tooltips
       ggplotly(p, tooltip = "text")
     }
+  })
+  
+  # Observe event for updating reference data from SHARK
+  observeEvent(input$update_ref, {
+    showNotification("Uppdaterar referensdata...", type = "message", id = "update_ref_msg", duration = NULL)
+    
+    tryCatch({
+      update_stats(input$to_year, input$time_range, stats_list(), station_names, parameter_map, input$min_n)
+      
+      # Reload updated reference data
+      updated_stats <- readRDS("data/reference_data/reference_data.rds")
+      stats_list(updated_stats)
+      
+      removeNotification(id = "update_ref_msg")
+      showNotification("Referensdata uppdaterad!", type = "message", duration = 5)
+    }, error = function(e) {
+      removeNotification(id = "update_ref_msg")
+      showNotification(paste("Fel vid uppdatering:", e$message), type = "error", duration = 10)
+    })
+  })
+  
+  output$ref_table <- DT::renderDataTable({
+    req(stats_list())
+    
+    # Create a summary table for all datasets in stats_list
+    summary_df <- lapply(names(stats_list()), function(name) {
+      df <- stats_list()[[name]]
+      
+      # Filter out rows with NA in mean
+      df <- df %>% dplyr::filter(!is.na(mean))
+      
+      tibble(
+        Dataset = name,
+        `Antal stationer` = n_distinct(df$station),
+        `Antal parametrar` = n_distinct(df$parameter_id),
+        `Antal rader` = nrow(df),
+        Källa = unique(df$source),
+        `Senaste uppdatering` = unique(df$date_updated)
+      )
+    }) %>% 
+      bind_rows()
+    
+    DT::datatable(
+      summary_df,
+      options = list(
+        pageLength = 15,
+        autoWidth = TRUE
+      ),
+      caption = "Sammanfattning av tillgängliga referensdataset",
+    )
   })
 }
 
