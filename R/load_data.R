@@ -1,4 +1,5 @@
 library(tibble)
+library(readr)
 
 # Read version from DESCRIPTION
 pkg_version <- read.dcf("DESCRIPTION", fields = "Version")[1]
