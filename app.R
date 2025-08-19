@@ -233,23 +233,24 @@ server <- function(input, output, session) {
   })
   
   output$ref_station_ui <- renderUI({
-    # Build station choices from selected dataset and parameter, fall back to all_stations
-    req(stats_list())
+    # Build station choices from selected dataset and parameter
+    req(stats_list(), input$ref_dataset)
     
-    all_stations <- sort(unique(unlist(lapply(stats_list(), function(df) df$station))))
+    # Get the stats dataframe for the selected dataset
+    stats <- stats_list()[[input$ref_dataset]]
     
-    if (!is.null(input$ref_dataset) && input$ref_dataset %in% names(stats_list())) {
-      df <- stats_list()[[input$ref_dataset]]
-      if (!is.null(input$ref_param)) {
-        stations <- sort(unique(df$station[df$parameter_name_short == input$ref_param]))
-      } else {
-        stations <- sort(unique(df$station))
-      }
-      if (length(stations) == 0) stations <- sort(all_stations)
+    # If no stats or no stations, return empty choices
+    if (is.null(stats) || nrow(stats) == 0 || all(is.na(stats$station))) {
+      stations <- character(0)
     } else {
-      stations <- sort(all_stations)
+      stations <- sort(unique(stats$station))
     }
-    selectInput("ref_station", "Välj station", choices = stations, selected = stations[1])
+    
+    selectInput(
+      "ref_station", "Välj station",
+      choices = stations,
+      selected = if (length(stations) > 0) stations[1] else NULL
+    )
   })
   
   # Access the chosen dataframe
