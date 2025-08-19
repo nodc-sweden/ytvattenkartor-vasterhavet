@@ -40,9 +40,8 @@ ui <- fluidPage(
     tabPanel("Kartdiagram",
              sidebarLayout(
                sidebarPanel(
-                 fileInput("data_file", "Ladda upp InfoC-export (.txt)", accept = ".txt"),
+                 fileInput("data_file", "Ladda upp InfoC-export (.txt)", accept = ".txt", placeholder = "t.ex. BH_19_21_2025-05-27.txt"),
                  uiOutput("reference_data_ui"),
-                 # Checkbox styling from your current code...
                  div(
                    tags$div(
                      style = "font-weight: bold; margin-bottom: 4px; padding-left: 2px;",
@@ -98,6 +97,7 @@ ui <- fluidPage(
     tabPanel("Utforska referensdata",
              sidebarLayout(
                sidebarPanel(
+                 uiOutput("ref_year_ui"),
                  # These inputs are dynamic because stats_list is reactive
                  uiOutput("ref_param_ui"),
                  uiOutput("ref_dataset_ui"),
@@ -112,16 +112,18 @@ ui <- fluidPage(
     tabPanel("Uppdatera referensdata",
              sidebarLayout(
                sidebarPanel(
-                 # These inputs are dynamic because stats_list is reactive
                  numericInput("to_year", "Uppdatera till och med år:", value = as.integer(format(Sys.Date(), "%Y")) - 1),
                  numericInput("time_range", "Tidsspann (år):", value = 10, min = 1),
                  numericInput("min_n", "Minsta antal mätningar för medelvärde:", value = 3, min = 1),
-                 checkboxGroupInput("platform_filter", "Välj plattformskoder:",
+                 checkboxGroupInput("platform_filter", 
+                                    label = HTML('Välj plattformskoder (<a href="https://smhi.se/oceanografi/oce_info_data/shark_web/downloads/codelist_SMHI.xlsx" target="_blank">se aktuell lista här</a>):'),
                                     choices = platform_codes,
                                     selected = platform_codes),
-                 
                  textInput("platform_custom", "Ange andra plattformskoder (separerade med komma-tecken):",
                            placeholder = "t.ex. 77WX, 77K9"),
+                 textInput("station_custom", 
+                           HTML('Lägg till ytterligare stationer än de <a href="https://github.com/nodc-sweden/ytvattenkartor-vasterhavet/blob/f4a22cb947405553fae5151ebcbb8d53c453423f/data/config/station_names.txt" target="_blank">fördefinierade</a>:'),
+                           placeholder = "t.ex. BY10, BY15 GOTLANDSDJ"),
                  actionButton("update_ref", "Uppdatera referensdata"),
                  width = 3
                ),
@@ -179,6 +181,26 @@ server <- function(input, output, session) {
     }
   })
   
+  # Dynamically render a selectInput for available years based on uploaded data
+  output$ref_year_ui <- renderUI({
+    upload_years <- NULL
+    if (!is.null(input$data_file)) {
+      upload_years <- sort(unique(uploaded_data()$Year))
+    }
+    
+    # Only create selector if we have years
+    if (length(upload_years) > 0) {
+      selectInput(
+        "ref_year", "Välj år",
+        choices = upload_years,
+        selected = max(upload_years, na.rm = TRUE)
+      )
+    } else {
+      # Show a disabled selector so UI doesn't break
+      selectInput("ref_year", "Välj år", choices = c("Ingen uppladdad data" = ""), selected = "")
+    }
+  })
+  
   # Reference-data related UI: dataset / parameter / station
   output$reference_data_ui <- renderUI({
     selectInput(
@@ -230,11 +252,11 @@ server <- function(input, output, session) {
     selectInput("ref_station", "Välj station", choices = stations, selected = stations[1])
   })
   
-  # Access the chosen dataframe like this (reactive)
-  selected_stats <- reactive({
-    req(input$reference_data)
-    stats_list()[[input$reference_data]]
-  })
+  # Access the chosen dataframe
+  selected_stats <- reactive({ 
+    req(input$reference_data) 
+    stats_list()[[input$reference_data]] 
+    })
   
   # Define a reactive expression to read and preprocess the uploaded data file
   uploaded_data <- reactive({
@@ -276,31 +298,6 @@ server <- function(input, output, session) {
     data_upload
   })
   
-  # Reactive that returns station depths for the selected
-  # parameter/date — bottom depth for O2_CTD, else surface (0 m).
-  selected_depths <- reactive({
-    data <- uploaded_data()
-    req(data, input$parameter, input$year, input$month)
-    
-    if (input$parameter == "O2_CTD (prio CTD)") {
-      # Bottom depths
-      data %>%
-        filter(Year == input$year, `Month (calc)` == input$month) %>%
-        filter(!is.na(.data[[input$parameter]])) %>%
-        group_by(Station) %>%
-        slice_max(Depth, with_ties = FALSE) %>%
-        ungroup() %>%
-        transmute(Station = toupper(Station), depth = as.integer(Depth))
-    } else {
-      # Surface depth
-      data %>%
-        filter(Year == input$year, `Month (calc)` == input$month) %>%
-        filter(!is.na(.data[[input$parameter]])) %>%
-        distinct(Station) %>%
-        transmute(Station = toupper(Station), depth = 0L)
-    }
-  })
-  
   # Reactive expression that returns the uploaded dataset
   # filtered by the selected year, month, and parameter,
   # and enriched with statistical reference values and anomaly
@@ -310,7 +307,7 @@ server <- function(input, output, session) {
     prepare_joined_data(uploaded_data(), input$parameter, input$year, input$month,
                         selected_stats(), all_anomalies, input$only_flanks)
   })
-  
+
   # Define the reactive output for rendering the map plot
   output$map_plot <- renderPlot({
     df <- tryCatch({
@@ -540,6 +537,45 @@ server <- function(input, output, session) {
           theme(legend.position = "right")
       })
       
+      if (!is.null(input$data_file) && length(input$ref_year) > 0) {
+        
+        parameter <- parameter_map[parameter_map$parameter_name_short == input$ref_param,]$parameter_name
+        
+        # Select
+        df_filtered <- uploaded_data() %>%
+          filter(Year == input$ref_year, Station == input$ref_station) 
+        
+        # Depths from selected_depths logic
+        depth_df <- get_depth_df_ref(df_filtered, parameter)
+        
+        # Join depths to data
+        df <- df_filtered %>%
+          mutate(Station = toupper(Station)) %>%
+          rename(value = !!sym(parameter),
+                 month = `Month (calc)`) %>%
+          left_join(depth_df, by = c("Station", "month")) %>%
+          filter(Depth == depth) %>%
+          dplyr::mutate(
+            hover_value = paste0("Månad: ", str_to_sentence(month_names_sv)[month],
+                                "<br>Mätvärde: ", round(value, 2)
+          ))
+        
+        suppressWarnings({
+          p <- p +
+            geom_point(
+              data = df,
+              aes(x = month, y = value, colour = "Current value", text = hover_value),
+              size = 3,
+              shape = 16,
+              alpha = 0.7
+            ) +
+            scale_colour_manual(
+              values = c("Mean" = "red", "Current value" = "green")
+            )
+        })
+        
+      }
+      
       # Convert to interactive plotly plot with custom tooltips
       ggplotly(p, tooltip = "text")
     }
@@ -560,8 +596,19 @@ server <- function(input, output, session) {
       selected_platforms <- unique(c(selected_platforms, extra_codes))
     }
     
+    # From pre-defined list
+    selected_stations <- station_names
+    
+    # From free text (split on commas or whitespace, trim spaces)
+    if (nzchar(input$station_custom)) {
+      extra_stations <- unlist(strsplit(input$station_custom, "[, ]+"))
+      extra_stations <- trimws(extra_stations)  # remove stray spaces
+      extra_stations <- extra_stations[nzchar(extra_stations)]  # drop empty
+      selected_stations <- unique(c(selected_stations, extra_stations))
+    }
+    
     tryCatch({
-      update_stats(input$to_year, input$time_range, stats_list(), station_names, parameter_map, input$min_n, selected_platforms)
+      update_stats(input$to_year, input$time_range, stats_list(), selected_stations, parameter_map, input$min_n, selected_platforms)
       
       # Reload updated reference data
       updated_stats <- readRDS("data/reference_data/reference_data.rds")
