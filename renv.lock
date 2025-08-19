@@ -637,6 +637,29 @@
       "Author": "Markus Lindh [aut] (affiliation: Swedish Meteorological and Hydrological Institute, ORCID: <https://orcid.org/0000-0002-7120-4145>), Anders Torstensson [aut, cre] (affiliation: Swedish Meteorological and Hydrological Institute, ORCID: <https://orcid.org/0000-0002-8283-656X>), SHARK [cph]",
       "Maintainer": "Anders Torstensson <anders.torstensson@smhi.se>"
     },
+    "SolveSAPHE": {
+      "Package": "SolveSAPHE",
+      "Version": "2.1.0",
+      "Source": "Repository",
+      "Title": "Solver Suite for Alkalinity-PH Equations",
+      "Date": "2021-04-09",
+      "Authors@R": "c(person(\"Jean-Marie\", \"Epitalon\", role = c(\"aut\", \"cre\", \"cph\"), email = \"jean-marie.epitalon@orange.fr\"), person(\"Jean-Pierre\", \"Gattuso\", role = c(\"cph\"), email = \"gattuso@obs-vlfr.fr\"), person(\"Guy\", \"Munhoven\", role = \"aut\", email = \"Guy.Munhoven@ulg.ac.be\") )",
+      "Depends": [
+        "R (>= 2.10)"
+      ],
+      "Imports": [
+        "stats"
+      ],
+      "Description": "Universal and robust algorithm for solving the total alkalinity-pH equation presented in G. Munhoven (2013) <doi:10.5194/gmd-6-1367-2013> and G. Munhoven (2021) <doi:10.5194/gmd-2020-447>. The total alkalinity-pH equation relates total alkalinity and pH for a given set of acid-base concentrations in a given water sample, among which carbonic acid. This package is particularly useful in marine chemistry involving dissolved inorganic carbon. Original package in Fortran can be found at <doi:10.5281/zenodo.4328965>.",
+      "Encoding": "UTF-8",
+      "URL": "https://CRAN.R-project.org/package=SolveSAPHE",
+      "License": "GPL (>= 2)",
+      "Repository": "CRAN",
+      "RoxygenNote": "7.1.0",
+      "NeedsCompilation": "no",
+      "Author": "Jean-Marie Epitalon [aut, cre, cph], Jean-Pierre Gattuso [cph], Guy Munhoven [aut]",
+      "Maintainer": "Jean-Marie Epitalon <jean-marie.epitalon@orange.fr>"
+    },
     "SparseM": {
       "Package": "SparseM",
       "Version": "1.84-2",
@@ -2293,6 +2316,36 @@
       "Maintainer": "Baptiste Auguie <baptiste.auguie@gmail.com>",
       "Repository": "CRAN"
     },
+    "gsw": {
+      "Package": "gsw",
+      "Version": "1.2-0",
+      "Source": "Repository",
+      "Title": "Gibbs Sea Water Functions",
+      "Authors@R": "c( person(given=\"Dan\", family=\"Kelley\", email=\"dan.kelley@dal.ca\", role=c(\"aut\",\"cre\",\"cph\"), comment=c(ORCID=\"https://orcid.org/0000-0001-7808-5911\")), person(given=\"Clark\", family=\"Richards\", email=\"clark.richards@gmail.com\", role=c(\"aut\",\"cph\"), comment=c(ORCID=\"https://orcid.org/0000-0002-7833-206X\")), person(given=\"WG127\", family=\"SCOR/IAPSO\", role=c(\"aut\",\"cph\"), comment=\"Original 'Matlab' and derived code\"))",
+      "Copyright": "Original algorithms and 'Matlab'/C library (c) 2015-2023 WG127 SCOR/IAPSO (Scientific Committee on Oceanic Research / International Association for the Physical Sciences of the Oceans, Working Group 127); C wrapper code and R code (c) 2015-2023 Dan Kelley and Clark Richards",
+      "Maintainer": "Dan Kelley <dan.kelley@dal.ca>",
+      "Depends": [
+        "R (>= 3.5.0)"
+      ],
+      "Suggests": [
+        "knitr",
+        "rmarkdown",
+        "testthat"
+      ],
+      "BugReports": "https://github.com/TEOS-10/GSW-R/issues",
+      "Description": "Provides an interface to the Gibbs 'SeaWater' ('TEOS-10') C library, version 3.06-16-0 (commit '657216dd4f5ea079b5f0e021a4163e2d26893371', dated 2022-10-11, available at <https://github.com/TEOS-10/GSW-C>, which stems from 'Matlab' and other code written by members of Working Group 127 of 'SCOR'/'IAPSO' (Scientific Committee on Oceanic Research / International Association for the Physical Sciences of the Oceans).",
+      "URL": "http://teos-10.github.io/GSW-R/",
+      "License": "GPL (>= 2) | file LICENSE",
+      "LazyLoad": "yes",
+      "LazyData": "no",
+      "Encoding": "UTF-8",
+      "RoxygenNote": "7.3.2",
+      "BuildVignettes": "true",
+      "VignetteBuilder": "knitr",
+      "NeedsCompilation": "yes",
+      "Author": "Dan Kelley [aut, cre, cph] (<https://orcid.org/0000-0001-7808-5911>), Clark Richards [aut, cph] (<https://orcid.org/0000-0002-7833-206X>), WG127 SCOR/IAPSO [aut, cph] (Original 'Matlab' and derived code)",
+      "Repository": "CRAN"
+    },
     "gtable": {
       "Package": "gtable",
       "Version": "0.3.6",
@@ -3163,6 +3216,28 @@
       "Maintainer": "Lionel Henry <lionel@rstudio.com>",
       "Repository": "CRAN"
     },
+    "marelac": {
+      "Package": "marelac",
+      "Version": "2.1.11",
+      "Source": "Repository",
+      "Title": "Tools for Aquatic Sciences",
+      "Authors@R": "c(person(\"Karline\",\"Soetaert\", role = c(\"aut\", \"cre\"),  email = \"karline.soetaert@nioz.nl\"), person(\"Thomas\",\"Petzoldt\", role = c(\"aut\"), email = \"thomas.petzoldt@tu-dresden.de\"), person(\"Filip\", \"Meysman\",role = \"cph\"), person(\"Lorenz\", \"Meire\", role = \"cph\"))",
+      "Author": "Karline Soetaert [aut, cre], Thomas Petzoldt [aut], Filip Meysman [cph], Lorenz Meire [cph]",
+      "Maintainer": "Karline Soetaert <karline.soetaert@nioz.nl>",
+      "Depends": [
+        "R (>= 3.2)",
+        "shape"
+      ],
+      "Imports": [
+        "stats",
+        "seacarb"
+      ],
+      "Description": "Datasets, constants, conversion factors, and utilities for 'MArine', 'Riverine', 'Estuarine', 'LAcustrine' and 'Coastal' science.  The package contains among others: (1) chemical and physical constants and datasets, e.g. atomic weights, gas constants, the earths bathymetry; (2) conversion factors (e.g. gram to mol to liter, barometric units, temperature, salinity); (3) physical functions, e.g. to estimate concentrations of conservative substances, gas transfer and diffusion coefficients, the Coriolis force and gravity; (4) thermophysical properties of the seawater, as from the UNESCO polynomial or from the more recent derivation based on a Gibbs function.",
+      "License": "GPL (>= 2)",
+      "LazyData": "yes",
+      "NeedsCompilation": "yes",
+      "Repository": "CRAN"
+    },
     "markdown": {
       "Package": "markdown",
       "Version": "2.0",
@@ -3471,6 +3546,57 @@
       "Maintainer": "Paul Gilbert <pgilbert.ttv9z@ncf.ca>",
       "URL": "http://optimizer.r-forge.r-project.org/",
       "NeedsCompilation": "no",
+      "Repository": "CRAN"
+    },
+    "oce": {
+      "Package": "oce",
+      "Version": "1.8-3",
+      "Source": "Repository",
+      "Title": "Analysis of Oceanographic Data",
+      "Authors@R": "c( person(given=\"Dan\", family=\"Kelley\", email=\"Dan.Kelley@Dal.Ca\", role=c(\"aut\", \"cre\"), comment=c(ORCID=\"https://orcid.org/0000-0001-7808-5911\")), person(given=\"Clark\", family=\"Richards\", email=\"clark.richards@gmail.com\", role=c(\"aut\"), comment=c(ORCID=\"https://orcid.org/0000-0002-7833-206X\")), person(given=\"Chantelle\", family=\"Layton\", email=\"chantelle.layton@dal.ca\", role=c(\"ctb\"), comment=c(ORCID=\"https://orcid.org/0000-0002-3199-5763\", \"curl() coauthor\")), person(given=\"British Geological Survey\", role=c(\"ctb\",\"cph\"), comment=\"magnetic-field subroutine\"))",
+      "Maintainer": "Dan Kelley <Dan.Kelley@Dal.Ca>",
+      "Depends": [
+        "R (>= 4.1.0)",
+        "gsw",
+        "methods",
+        "utils"
+      ],
+      "Suggests": [
+        "automap",
+        "DBI",
+        "foreign",
+        "interp",
+        "knitr",
+        "lubridate",
+        "ncdf4",
+        "ocedata",
+        "rmarkdown",
+        "RSQLite",
+        "R.utils",
+        "sf",
+        "terra",
+        "testthat (>= 3.0.0)",
+        "tiff",
+        "XML"
+      ],
+      "BugReports": "https://github.com/dankelley/oce/issues",
+      "Description": "Supports the analysis of Oceanographic data, including 'ADCP' measurements, measurements made with 'argo' floats, 'CTD' measurements, sectional data, sea-level time series, coastline and topographic data, etc. Provides specialized functions for calculating seawater properties such as potential temperature in either the 'UNESCO' or 'TEOS-10' equation of state. Produces graphical displays that conform to the conventions of the Oceanographic literature. This package is discussed extensively by Kelley (2018) \"Oceanographic Analysis with R\" <doi:10.1007/978-1-4939-8844-0>.",
+      "License": "GPL (>= 2)",
+      "Encoding": "UTF-8",
+      "URL": "https://dankelley.github.io/oce/",
+      "LazyData": "false",
+      "RoxygenNote": "7.3.2",
+      "BuildVignettes": "true",
+      "VignetteBuilder": "knitr",
+      "NeedsCompilation": "yes",
+      "LinkingTo": [
+        "Rcpp"
+      ],
+      "Imports": [
+        "Rcpp"
+      ],
+      "Config/testthat/edition": "3",
+      "Author": "Dan Kelley [aut, cre] (<https://orcid.org/0000-0001-7808-5911>), Clark Richards [aut] (<https://orcid.org/0000-0002-7833-206X>), Chantelle Layton [ctb] (<https://orcid.org/0000-0002-3199-5763>, curl() coauthor), British Geological Survey [ctb, cph] (magnetic-field subroutine)",
       "Repository": "CRAN"
     },
     "openssl": {
@@ -4688,6 +4814,30 @@
       "Maintainer": "Thomas Lin Pedersen <thomas.pedersen@posit.co>",
       "Repository": "CRAN"
     },
+    "seacarb": {
+      "Package": "seacarb",
+      "Version": "3.3.3",
+      "Source": "Repository",
+      "Title": "Seawater Carbonate Chemistry",
+      "Date": "2024-02-14",
+      "LazyData": "true",
+      "Authors@R": "c(person(\"Jean-Pierre\", \"Gattuso\", role = c(\"aut\", \"cre\", \"cph\"), email = \"jean-pierre.gattuso@imev-mer.fr\"), person(\"Jean-Marie\", \"Epitalon\", role = \"aut\", email = \"jean-marie.epitalon@orange.fr\"), person(\"Heloise\", \"Lavigne\", role = \"aut\", email = \"lavigne@obs-vlfr.fr\"), person(\"James\", \"Orr\", role = \"aut\", email = \"james.orr@lsce.ipsl.fr\"), person(\"Bernard\", \"Gentili\", role = \"ctb\"), person(\"Mathilde\", \"Hagens\", role = \"ctb\"), person(\"Andreas\", \"Hofmann\", role = \"ctb\"), person(\"Jens-Daniel\", \"Mueller\", role = \"ctb\"), person(\"Aurélien\", \"Proye\", role = \"ctb\"), person(\"James\", \"Rae\", role = \"ctb\"), person(\"Karline\", \"Soetaert\", role = \"ctb\") )",
+      "Depends": [
+        "R (>= 3.5.0)",
+        "oce",
+        "gsw",
+        "SolveSAPHE"
+      ],
+      "Description": "Calculates parameters of the seawater carbonate system and assists the design of ocean acidification perturbation experiments.",
+      "Encoding": "UTF-8",
+      "URL": "https://CRAN.R-project.org/package=seacarb",
+      "License": "GPL (>= 2)",
+      "Repository": "CRAN",
+      "RoxygenNote": "7.1.1",
+      "NeedsCompilation": "no",
+      "Author": "Jean-Pierre Gattuso [aut, cre, cph], Jean-Marie Epitalon [aut], Heloise Lavigne [aut], James Orr [aut], Bernard Gentili [ctb], Mathilde Hagens [ctb], Andreas Hofmann [ctb], Jens-Daniel Mueller [ctb], Aurélien Proye [ctb], James Rae [ctb], Karline Soetaert [ctb]",
+      "Maintainer": "Jean-Pierre Gattuso <jean-pierre.gattuso@imev-mer.fr>"
+    },
     "sf": {
       "Package": "sf",
       "Version": "1.0-21",
@@ -4766,6 +4916,26 @@
       "NeedsCompilation": "yes",
       "Author": "Edzer Pebesma [aut, cre] (ORCID: <https://orcid.org/0000-0001-8049-7069>), Roger Bivand [ctb] (ORCID: <https://orcid.org/0000-0003-2392-6140>), Etienne Racine [ctb], Michael Sumner [ctb], Ian Cook [ctb], Tim Keitt [ctb], Robin Lovelace [ctb], Hadley Wickham [ctb], Jeroen Ooms [ctb] (ORCID: <https://orcid.org/0000-0002-4035-0289>), Kirill Müller [ctb], Thomas Lin Pedersen [ctb], Dan Baston [ctb], Dewey Dunnington [ctb] (ORCID: <https://orcid.org/0000-0002-9415-4582>)",
       "Maintainer": "Edzer Pebesma <edzer.pebesma@uni-muenster.de>",
+      "Repository": "CRAN"
+    },
+    "shape": {
+      "Package": "shape",
+      "Version": "1.4.6.1",
+      "Source": "Repository",
+      "Title": "Functions for Plotting Graphical Shapes, Colors",
+      "Author": "Karline Soetaert <karline.soetaert@nioz.nl>",
+      "Maintainer": "Karline Soetaert <karline.soetaert@nioz.nl>",
+      "Depends": [
+        "R (>= 2.01)"
+      ],
+      "Imports": [
+        "stats",
+        "graphics",
+        "grDevices"
+      ],
+      "Description": "Functions for plotting graphical shapes such as ellipses, circles, cylinders, arrows, ...",
+      "License": "GPL (>= 3)",
+      "NeedsCompilation": "no",
       "Repository": "CRAN"
     },
     "shiny": {

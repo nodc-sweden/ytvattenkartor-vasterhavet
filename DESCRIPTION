@@ -23,4 +23,5 @@ Imports:
     DT,
     SHARK4R,
     markdown,
-    plotly
+    plotly,
+    marelac

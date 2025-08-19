@@ -7,6 +7,7 @@ library(ggplot2)
 library(readr)
 library(SHARK4R)
 library(tidyr)
+library(marelac)
 
 # Conversion function
 convert_dmm_to_dd <- function(dmm) {
@@ -426,6 +427,26 @@ update_stats <- function(to_year, time_range, stats_list, station_names, paramet
                                stationName = station_names,
                                verbose = FALSE)
   
+  # Calculate oxygen saturation
+  shark_data <- shark_data %>%
+    mutate(
+      # 1) Convert measured DO from mL/L -> mg/L
+      DO_mgL = `Dissolved oxygen O2 CTD (ml/l)` * 1.42903,
+      # 2) Compute O2 saturation concentration (mg/L) safely (skip rows with NA in S or T)
+      O2_sat_mgL = {
+        S <- `Salinity CTD (o/oo psu)`
+        T <- `Temperature CTD (C)`
+        out <- rep(NA_real_, length(S))
+        idx <- !is.na(S) & !is.na(T)
+        if (any(idx)) {
+          out[idx] <- marelac::gas_O2sat(S = S[idx], t = T[idx], method = "Weiss")
+        }
+        out
+      },
+      # 3) Percent saturation
+      `Oxygen saturation CTD (%)` = 100 * DO_mgL / O2_sat_mgL
+    )
+  
   # Rename specific stations for consistency with plotting/statistical datasets
   shark_data$station_name[shark_data$station_name == "KOSTERFJORDEN NR16"] <- "KOSTERFJORDEN (NR16)"
   
@@ -451,10 +472,6 @@ update_stats <- function(to_year, time_range, stats_list, station_names, paramet
     shark_data$`Nitrate NO3-N (umol/l)`,
     shark_data$`Ammonium NH4-N (umol/l)`
   )
-  
-  # Remove syremättnad for now as it does not exist in SHARK
-  parameter_map <- parameter_map %>%
-    filter(!parameter_name_short == "Syremättnad")
   
   # Standard depths
   standard_depth <- c(
