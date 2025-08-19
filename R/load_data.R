@@ -49,11 +49,11 @@ all_anomalies <- c(
 
 # Define color codes for each anomaly level (used in maps and plots)
 anomaly_colors_swe <- c(
-  "Mycket högre än normalt" = "#d73027",
-  "Högre än normalt" = "#fdae61",
-  "Normala värden" = "#66bd63",
-  "Lägre än normalt" = "#91bfdb",
-  "Mycket lägre än normalt" = "#313695",
+  "Mycket högre än normalt" = "#440154FF",
+  "Högre än normalt" = "#3B528BFF",
+  "Normala värden" = "#21908CFF",
+  "Lägre än normalt" = "#5DC863FF",
+  "Mycket lägre än normalt" = "#FDE725FF",
   "Saknar referensvärde" = "white"
 )
 
