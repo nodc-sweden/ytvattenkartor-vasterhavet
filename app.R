@@ -98,7 +98,6 @@ ui <- fluidPage(
              sidebarLayout(
                sidebarPanel(
                  uiOutput("ref_year_ui"),
-                 
                  # These inputs are dynamic because stats_list is reactive
                  uiOutput("ref_param_ui"),
                  uiOutput("ref_dataset_ui"),
@@ -123,7 +122,7 @@ ui <- fluidPage(
                  textInput("platform_custom", "Ange andra plattformskoder (separerade med komma-tecken):",
                            placeholder = "t.ex. 77WX, 77K9"),
                  textInput("station_custom", 
-                           HTML('Ange ytterligare stationer än de <a href="https://github.com/nodc-sweden/ytvattenkartor-vasterhavet/blob/f4a22cb947405553fae5151ebcbb8d53c453423f/data/config/station_names.txt" target="_blank">fördefinierade</a>:'),
+                           HTML('Lägg till ytterligare stationer än de <a href="https://github.com/nodc-sweden/ytvattenkartor-vasterhavet/blob/f4a22cb947405553fae5151ebcbb8d53c453423f/data/config/station_names.txt" target="_blank">fördefinierade</a>:'),
                            placeholder = "t.ex. BY10, BY15 GOTLANDSDJ"),
                  actionButton("update_ref", "Uppdatera referensdata"),
                  width = 3
