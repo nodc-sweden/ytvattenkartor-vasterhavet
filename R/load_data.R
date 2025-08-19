@@ -51,8 +51,8 @@ all_anomalies <- c(
 anomaly_colors_swe <- c(
   "Mycket högre än normalt" = "#440154FF",
   "Högre än normalt" = "#3B528BFF",
-  "Normala värden" = "#21908CFF",
-  "Lägre än normalt" = "#5DC863FF",
+  "Normala värden" = "#35b779",
+  "Lägre än normalt" = "#b5de2b",
   "Mycket lägre än normalt" = "#FDE725FF",
   "Saknar referensvärde" = "white"
 )
