@@ -97,6 +97,8 @@ ui <- fluidPage(
     tabPanel("Utforska referensdata",
              sidebarLayout(
                sidebarPanel(
+                 uiOutput("ref_year_ui"),
+                 
                  # These inputs are dynamic because stats_list is reactive
                  uiOutput("ref_param_ui"),
                  uiOutput("ref_dataset_ui"),
@@ -177,6 +179,26 @@ server <- function(input, output, session) {
     }
   })
   
+  # Dynamically render a selectInput for available years based on uploaded data
+  output$ref_year_ui <- renderUI({
+    upload_years <- NULL
+    if (!is.null(input$data_file)) {
+      upload_years <- sort(unique(uploaded_data()$Year))
+    }
+    
+    # Only create selector if we have years
+    if (length(upload_years) > 0) {
+      selectInput(
+        "ref_year", "Välj år",
+        choices = upload_years,
+        selected = max(upload_years, na.rm = TRUE)
+      )
+    } else {
+      # Show a disabled selector so UI doesn't break
+      selectInput("ref_year", "Välj år", choices = c("Ingen uppladdad data" = ""), selected = "")
+    }
+  })
+  
   # Reference-data related UI: dataset / parameter / station
   output$reference_data_ui <- renderUI({
     selectInput(
@@ -229,10 +251,10 @@ server <- function(input, output, session) {
   })
   
   # Access the chosen dataframe
-  selected_stats <- reactive({
-    req(input$reference_data)
-    stats_list()[[input$reference_data]]
-  })
+  selected_stats <- reactive({ 
+    req(input$reference_data) 
+    stats_list()[[input$reference_data]] 
+    })
   
   # Define a reactive expression to read and preprocess the uploaded data file
   uploaded_data <- reactive({
@@ -274,30 +296,30 @@ server <- function(input, output, session) {
     data_upload
   })
   
-  # Reactive that returns station depths for the selected
-  # parameter/date — bottom depth for O2_CTD, else surface (0 m).
-  selected_depths <- reactive({
-    data <- uploaded_data()
-    req(data, input$parameter, input$year, input$month)
-    
-    if (input$parameter == "O2_CTD (prio CTD)") {
-      # Bottom depths
-      data %>%
-        filter(Year == input$year, `Month (calc)` == input$month) %>%
-        filter(!is.na(.data[[input$parameter]])) %>%
-        group_by(Station) %>%
-        slice_max(Depth, with_ties = FALSE) %>%
-        ungroup() %>%
-        transmute(Station = toupper(Station), depth = as.integer(Depth))
-    } else {
-      # Surface depth
-      data %>%
-        filter(Year == input$year, `Month (calc)` == input$month) %>%
-        filter(!is.na(.data[[input$parameter]])) %>%
-        distinct(Station) %>%
-        transmute(Station = toupper(Station), depth = 0L)
-    }
-  })
+  # # Reactive that returns station depths for the selected
+  # # parameter/date — bottom depth for O2_CTD, else surface (0 m).
+  # selected_depths <- reactive({
+  #   data <- uploaded_data()
+  #   req(data, input$parameter, input$year, input$month)
+  #   
+  #   if (input$parameter == "O2_CTD (prio CTD)") {
+  #     # Bottom depths
+  #     data %>%
+  #       filter(Year == input$year, `Month (calc)` == input$month) %>%
+  #       filter(!is.na(.data[[input$parameter]])) %>%
+  #       group_by(Station) %>%
+  #       slice_max(Depth, with_ties = FALSE) %>%
+  #       ungroup() %>%
+  #       transmute(Station = toupper(Station), depth = as.integer(Depth))
+  #   } else {
+  #     # Surface depth
+  #     data %>%
+  #       filter(Year == input$year, `Month (calc)` == input$month) %>%
+  #       filter(!is.na(.data[[input$parameter]])) %>%
+  #       distinct(Station) %>%
+  #       transmute(Station = toupper(Station), depth = 0L)
+  #   }
+  # })
   
   # Reactive expression that returns the uploaded dataset
   # filtered by the selected year, month, and parameter,
@@ -308,7 +330,7 @@ server <- function(input, output, session) {
     prepare_joined_data(uploaded_data(), input$parameter, input$year, input$month,
                         selected_stats(), all_anomalies, input$only_flanks)
   })
-  
+
   # Define the reactive output for rendering the map plot
   output$map_plot <- renderPlot({
     df <- tryCatch({
@@ -537,6 +559,57 @@ server <- function(input, output, session) {
           theme_minimal() +
           theme(legend.position = "right")
       })
+      
+      if (!is.null(input$data_file) && length(input$ref_year) > 0) {
+        
+        parameter <- parameter_map[parameter_map$parameter_name_short == input$ref_param,]$parameter_name
+        
+        # Select
+        df_filtered <- uploaded_data() %>%
+          filter(Year == input$ref_year, Station == input$ref_station) %>%
+          rename(value = !!sym(parameter),
+                 month = `Month (calc)`)
+        
+        # Depths from selected_depths logic
+        depth_df <- if (parameter == "O2_CTD (prio CTD)") {
+          df_filtered %>%
+            filter(!is.na(value)) %>%
+            group_by(Station) %>%
+            slice_max(Depth, with_ties = FALSE) %>%
+            ungroup() %>%
+            transmute(Station = toupper(Station), depth = as.integer(Depth))
+        } else {
+          df_filtered %>%
+            filter(!is.na(value)) %>%
+            distinct(Station) %>%
+            transmute(Station = toupper(Station), depth = 0L)
+        }
+        
+        # Join depths to data
+        df <- df_filtered %>%
+          mutate(Station = toupper(Station)) %>%
+          left_join(depth_df, by = "Station") %>%
+          filter(Depth == depth) %>%
+          dplyr::mutate(
+            hover_value = paste0("Månad: ", str_to_sentence(month_names_sv)[month],
+                                "<br>Mätvärde: ", round(value, 2)
+          ))
+        
+        suppressWarnings({
+          p <- p +
+            geom_point(
+              data = df,
+              aes(x = month, y = value, colour = "Current value", text = hover_value),
+              size = 3,
+              shape = 16,
+              alpha = 0.7
+            ) +
+            scale_colour_manual(
+              values = c("Mean" = "red", "Current value" = "green")
+            )
+        })
+        
+      }
       
       # Convert to interactive plotly plot with custom tooltips
       ggplotly(p, tooltip = "text")
