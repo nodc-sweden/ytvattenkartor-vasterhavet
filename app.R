@@ -122,6 +122,9 @@ ui <- fluidPage(
                                     selected = platform_codes),
                  textInput("platform_custom", "Ange andra plattformskoder (separerade med komma-tecken):",
                            placeholder = "t.ex. 77WX, 77K9"),
+                 textInput("station_custom", 
+                           HTML('Ange ytterligare stationer än de <a href="https://github.com/nodc-sweden/ytvattenkartor-vasterhavet/blob/f4a22cb947405553fae5151ebcbb8d53c453423f/data/config/station_names.txt" target="_blank">fördefinierade</a>:'),
+                           placeholder = "t.ex. BY10, BY15 GOTLANDSDJ"),
                  actionButton("update_ref", "Uppdatera referensdata"),
                  width = 3
                ),
@@ -594,8 +597,19 @@ server <- function(input, output, session) {
       selected_platforms <- unique(c(selected_platforms, extra_codes))
     }
     
+    # From pre-defined list
+    selected_stations <- station_names
+    
+    # From free text (split on commas or whitespace, trim spaces)
+    if (nzchar(input$station_custom)) {
+      extra_stations <- unlist(strsplit(input$station_custom, "[, ]+"))
+      extra_stations <- trimws(extra_stations)  # remove stray spaces
+      extra_stations <- extra_stations[nzchar(extra_stations)]  # drop empty
+      selected_stations <- unique(c(selected_stations, extra_stations))
+    }
+    
     tryCatch({
-      update_stats(input$to_year, input$time_range, stats_list(), station_names, parameter_map, input$min_n, selected_platforms)
+      update_stats(input$to_year, input$time_range, stats_list(), selected_stations, parameter_map, input$min_n, selected_platforms)
       
       # Reload updated reference data
       updated_stats <- readRDS("data/reference_data/reference_data.rds")
