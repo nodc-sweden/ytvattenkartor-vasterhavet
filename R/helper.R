@@ -36,14 +36,9 @@ read_image_as_grob <- function(path, height_inches = 1) {
   rasterGrob(img, interpolate = TRUE, height = unit(height_inches, "inches"))
 }
 
-# Helper: join uploaded data with stats and add anomalies
-prepare_joined_data <- function(data, param, year, selected_month, stats_tidy, all_anomalies, only_flanks) {
-  # Filter year/month
-  df_filtered <- data %>%
-    filter(Year == year, `Month (calc)` == selected_month)
-  
-  # Depths from selected_depths logic
-  depth_df <- if (param == "O2_CTD (prio CTD)") {
+# Helper: compute depth_df from filtered data and parameter
+get_depth_df <- function(df_filtered, param) {
+  if (param == "O2_CTD (prio CTD)") {
     df_filtered %>%
       filter(!is.na(.data[[param]])) %>%
       group_by(Station) %>%
@@ -56,6 +51,33 @@ prepare_joined_data <- function(data, param, year, selected_month, stats_tidy, a
       distinct(Station) %>%
       transmute(Station = toupper(Station), depth = 0L)
   }
+}
+
+# Helper: compute depth_df from filtered data and parameter for all months
+get_depth_df_ref <- function(df_filtered, param) {
+  if (param == "O2_CTD (prio CTD)") {
+    df_filtered %>%
+      filter(!is.na(.data[[param]])) %>%
+      group_by(Station, `Month (calc)`) %>%
+      slice_max(Depth, with_ties = FALSE) %>%
+      ungroup() %>%
+      transmute(Station = toupper(Station), depth = as.integer(Depth), month = `Month (calc)`)
+  } else {
+    df_filtered %>%
+      filter(!is.na(.data[[param]])) %>%
+      distinct(Station, `Month (calc)`) %>%
+      transmute(Station = toupper(Station), depth = 0L, month = `Month (calc)`)
+  }
+}
+
+# Helper: join uploaded data with stats and add anomalies
+prepare_joined_data <- function(data, param, year, selected_month, stats_tidy, all_anomalies, only_flanks) {
+  # Filter year/month
+  df_filtered <- data %>%
+    filter(Year == year, `Month (calc)` == selected_month)
+  
+  # Depths from helper
+  depth_df <- get_depth_df(df_filtered, param)
   
   if (nrow(depth_df) == 0) return(NULL)
   

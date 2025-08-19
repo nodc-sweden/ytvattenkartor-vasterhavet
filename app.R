@@ -296,31 +296,6 @@ server <- function(input, output, session) {
     data_upload
   })
   
-  # # Reactive that returns station depths for the selected
-  # # parameter/date — bottom depth for O2_CTD, else surface (0 m).
-  # selected_depths <- reactive({
-  #   data <- uploaded_data()
-  #   req(data, input$parameter, input$year, input$month)
-  #   
-  #   if (input$parameter == "O2_CTD (prio CTD)") {
-  #     # Bottom depths
-  #     data %>%
-  #       filter(Year == input$year, `Month (calc)` == input$month) %>%
-  #       filter(!is.na(.data[[input$parameter]])) %>%
-  #       group_by(Station) %>%
-  #       slice_max(Depth, with_ties = FALSE) %>%
-  #       ungroup() %>%
-  #       transmute(Station = toupper(Station), depth = as.integer(Depth))
-  #   } else {
-  #     # Surface depth
-  #     data %>%
-  #       filter(Year == input$year, `Month (calc)` == input$month) %>%
-  #       filter(!is.na(.data[[input$parameter]])) %>%
-  #       distinct(Station) %>%
-  #       transmute(Station = toupper(Station), depth = 0L)
-  #   }
-  # })
-  
   # Reactive expression that returns the uploaded dataset
   # filtered by the selected year, month, and parameter,
   # and enriched with statistical reference values and anomaly
@@ -566,29 +541,17 @@ server <- function(input, output, session) {
         
         # Select
         df_filtered <- uploaded_data() %>%
-          filter(Year == input$ref_year, Station == input$ref_station) %>%
-          rename(value = !!sym(parameter),
-                 month = `Month (calc)`)
+          filter(Year == input$ref_year, Station == input$ref_station) 
         
         # Depths from selected_depths logic
-        depth_df <- if (parameter == "O2_CTD (prio CTD)") {
-          df_filtered %>%
-            filter(!is.na(value)) %>%
-            group_by(Station) %>%
-            slice_max(Depth, with_ties = FALSE) %>%
-            ungroup() %>%
-            transmute(Station = toupper(Station), depth = as.integer(Depth))
-        } else {
-          df_filtered %>%
-            filter(!is.na(value)) %>%
-            distinct(Station) %>%
-            transmute(Station = toupper(Station), depth = 0L)
-        }
+        depth_df <- get_depth_df_ref(df_filtered, parameter)
         
         # Join depths to data
         df <- df_filtered %>%
           mutate(Station = toupper(Station)) %>%
-          left_join(depth_df, by = "Station") %>%
+          rename(value = !!sym(parameter),
+                 month = `Month (calc)`) %>%
+          left_join(depth_df, by = c("Station", "month")) %>%
           filter(Depth == depth) %>%
           dplyr::mutate(
             hover_value = paste0("Månad: ", str_to_sentence(month_names_sv)[month],
