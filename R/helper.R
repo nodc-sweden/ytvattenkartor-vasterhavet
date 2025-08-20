@@ -7,7 +7,7 @@ library(ggplot2)
 library(readr)
 library(SHARK4R)
 library(tidyr)
-library(marelac)
+library(gsw)
 
 # Conversion function
 convert_dmm_to_dd <- function(dmm) {
@@ -414,6 +414,31 @@ calculate_DIN <- function(NO2, NO3, NH4) {
   return(DIN)
 }
 
+# Function to calculate O2 saturation (%) from CTD data
+calc_O2_saturation <- function(salinity, temperature, oxygen_mlL, depth_m,
+                               latitude = 57, longitude = 12) {
+  
+  # Convert depth -> pressure (dbar)
+  p <- gsw_p_from_z(z = -depth_m, latitude = latitude)
+  # Absolute salinity
+  SA <- gsw_SA_from_SP(SP = salinity, p = p,
+                       longitude = longitude, latitude = latitude)
+  # In-situ density (kg/m^3)
+  rho <- gsw_rho(SA = SA, CT = temperature, p = p)
+  # Convert DO from mL/L -> µmol/L
+  O2_umolL <- oxygen_mlL * 44.661
+  # Convert µmol/L -> µmol/kg
+  O2_umolkg <- O2_umolL / (rho / 1000)
+  # Potential temperature relative to 0 dbar
+  pt <- gsw_pt_from_CT(SA = SA, CT = temperature)
+  # Oxygen solubility (µmol/kg) at SP, pt
+  O2_sol <- gsw_O2sol_SP_pt(SP = salinity, pt = pt)
+  # Oxygen saturation (%)
+  O2_saturation <- (O2_umolkg / O2_sol) * 100
+  
+  return(O2_saturation)
+}
+
 update_stats <- function(to_year, time_range, stats_list, station_names, parameter_map, min_n, platform_filter) {
   # Calculate start and end years based on inputs
   start_year <- to_year - time_range + 1
@@ -427,25 +452,15 @@ update_stats <- function(to_year, time_range, stats_list, station_names, paramet
                                stationName = station_names,
                                verbose = FALSE)
   
-  # Calculate oxygen saturation
-  shark_data <- shark_data %>%
-    mutate(
-      # 1) Convert measured DO from mL/L -> mg/L
-      DO_mgL = `Dissolved oxygen O2 CTD (ml/l)` * 1.42903,
-      # 2) Compute O2 saturation concentration (mg/L) safely (skip rows with NA in S or T)
-      O2_sat_mgL = {
-        S <- `Salinity CTD (o/oo psu)`
-        T <- `Temperature CTD (C)`
-        out <- rep(NA_real_, length(S))
-        idx <- !is.na(S) & !is.na(T)
-        if (any(idx)) {
-          out[idx] <- marelac::gas_O2sat(S = S[idx], t = T[idx], method = "Weiss")
-        }
-        out
-      },
-      # 3) Percent saturation
-      `Oxygen saturation CTD (%)` = 100 * DO_mgL / O2_sat_mgL
-    )
+  # Calculate oxygen saturation (%)
+  shark_data$O2_saturation <- calc_O2_saturation(
+    salinity    = shark_data$`Salinity CTD (o/oo psu)`,
+    temperature = shark_data$`Temperature CTD (C)`,
+    oxygen_mlL  = shark_data$`Dissolved oxygen O2 CTD (ml/l)`,
+    depth_m     = shark_data$sample_depth_m,
+    latitude    = shark_data$sample_latitude_dd,
+    longitude   = shark_data$sample_longitude_dd
+  )
   
   # Rename specific stations for consistency with plotting/statistical datasets
   shark_data$station_name[shark_data$station_name == "KOSTERFJORDEN NR16"] <- "KOSTERFJORDEN (NR16)"

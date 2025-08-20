@@ -30,7 +30,7 @@ To install the app on your local machine, clone [this repository](https://github
 ```r
 install.packages(c("shiny", "tidyverse", "sf", "R.matlab", "ggrepel", 
                    "png", "tiff", "jpeg", "grid", "gridExtra", "ggpubr", 
-                   "plotly", "DT", "remotes", "markdown", "marelac"))
+                   "plotly", "DT", "remotes", "markdown", "gsw"))
 remotes::install_github("sharksmhi/SHARK4R")  # Required for updating reference data
 ```
 

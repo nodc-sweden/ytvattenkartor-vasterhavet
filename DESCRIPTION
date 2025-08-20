@@ -24,4 +24,4 @@ Imports:
     SHARK4R,
     markdown,
     plotly,
-    marelac
+    gsw

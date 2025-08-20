@@ -27,7 +27,7 @@ library(SHARK4R)
 library(DT)
 library(tidyr)
 library(markdown)
-library(marelac)
+library(gsw)
 
 # Load helper functions and data (these define functions like prepare_joined_data, create_plot, etc.)
 source(file.path("R", "helper.R"))

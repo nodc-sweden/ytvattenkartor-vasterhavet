@@ -32,7 +32,7 @@ parameter_map <- tibble::tibble(
     "Temperature CTD (C)",
     "Salinity CTD (o/oo psu)",
     "Dissolved oxygen O2 CTD (ml/l)",
-    "Oxygen saturation CTD (%)",
+    "O2_saturation",
     "Hydrogen sulphide H2S (umol/l)",
     "Phosphate PO4-P (umol/l)",
     "DIN",
