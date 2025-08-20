@@ -414,25 +414,68 @@ calculate_DIN <- function(NO2, NO3, NH4) {
   return(DIN)
 }
 
-# Function to calculate O2 saturation (%) from CTD data
-calc_O2_saturation <- function(salinity, temperature, oxygen_mlL, depth_m,
-                               latitude = 57, longitude = 12) {
+# Function to calculate O2 saturation (%) with CTD prioritized, bottle fallback
+calc_O2_saturation <- function(salinity_ctd = NULL, salinity_bottle = NULL,
+                               temperature_ctd = NULL, temperature_bottle = NULL,
+                               oxygen_ctd = NULL, oxygen_bottle = NULL,
+                               depth_m, latitude = 58, longitude = 12) {
   
+  # --- Salinity ---
+  if (!is.null(salinity_ctd) && !is.null(salinity_bottle)) {
+    salinity <- ifelse(!is.na(salinity_ctd), salinity_ctd, salinity_bottle)
+  } else if (!is.null(salinity_ctd)) {
+    salinity <- salinity_ctd
+  } else if (!is.null(salinity_bottle)) {
+    salinity <- salinity_bottle
+  } else {
+    stop("You must supply at least one of salinity_ctd or salinity_bottle")
+  }
+  
+  # --- Temperature ---
+  if (!is.null(temperature_ctd) && !is.null(temperature_bottle)) {
+    temperature <- ifelse(!is.na(temperature_ctd), temperature_ctd, temperature_bottle)
+  } else if (!is.null(temperature_ctd)) {
+    temperature <- temperature_ctd
+  } else if (!is.null(temperature_bottle)) {
+    temperature <- temperature_bottle
+  } else {
+    stop("You must supply at least one of temperature_ctd or temperature_bottle")
+  }
+  
+  # --- Oxygen ---
+  if (!is.null(oxygen_ctd) && !is.null(oxygen_bottle)) {
+    oxygen_mlL <- ifelse(!is.na(oxygen_ctd), oxygen_ctd, oxygen_bottle)
+  } else if (!is.null(oxygen_ctd)) {
+    oxygen_mlL <- oxygen_ctd
+  } else if (!is.null(oxygen_bottle)) {
+    oxygen_mlL <- oxygen_bottle
+  } else {
+    stop("You must supply at least one of oxygen_ctd or oxygen_bottle")
+  }
+  
+  # --- Calculations ---
   # Convert depth -> pressure (dbar)
   p <- gsw_p_from_z(z = -depth_m, latitude = latitude)
+  
   # Absolute salinity
   SA <- gsw_SA_from_SP(SP = salinity, p = p,
                        longitude = longitude, latitude = latitude)
+  
   # In-situ density (kg/m^3)
   rho <- gsw_rho(SA = SA, CT = temperature, p = p)
+  
   # Convert DO from mL/L -> µmol/L
   O2_umolL <- oxygen_mlL * 44.661
+  
   # Convert µmol/L -> µmol/kg
   O2_umolkg <- O2_umolL / (rho / 1000)
+  
   # Potential temperature relative to 0 dbar
   pt <- gsw_pt_from_CT(SA = SA, CT = temperature)
+  
   # Oxygen solubility (µmol/kg) at SP, pt
   O2_sol <- gsw_O2sol_SP_pt(SP = salinity, pt = pt)
+  
   # Oxygen saturation (%)
   O2_saturation <- (O2_umolkg / O2_sol) * 100
   
@@ -454,9 +497,12 @@ update_stats <- function(to_year, time_range, stats_list, station_names, paramet
   
   # Calculate oxygen saturation (%)
   shark_data$O2_saturation <- calc_O2_saturation(
-    salinity    = shark_data$`Salinity CTD (o/oo psu)`,
-    temperature = shark_data$`Temperature CTD (C)`,
-    oxygen_mlL  = shark_data$`Dissolved oxygen O2 CTD (ml/l)`,
+    salinity_ctd = shark_data$`Salinity CTD (o/oo psu)`,
+    salinity_bottle = shark_data$`Salinity bottle (o/oo psu)`,
+    temperature_ctd = shark_data$`Temperature CTD (C)`,
+    temperature_bottle = shark_data$`Temperature bottle (C)`,
+    oxygen_ctd  = shark_data$`Dissolved oxygen O2 CTD (ml/l)`,
+    oxygen_bottle = shark_data$`Dissolved oxygen O2 bottle (ml/l)`,
     depth_m     = shark_data$sample_depth_m,
     latitude    = shark_data$sample_latitude_dd,
     longitude   = shark_data$sample_longitude_dd
