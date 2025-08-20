@@ -290,12 +290,25 @@ server <- function(input, output, session) {
     # Ensure the 'Month (calc)' column is numeric (in case it's been read as character)
     data_upload$`Month (calc)` <- as.numeric(data_upload$`Month (calc)`)
     
-    # Calculate DIN
-    data_upload$DIN <- calculate_DIN(data_upload$NO2, data_upload$NO3, data_upload$NH4)
-    
     # Convert lat/lon to decimal degrees
     data_upload$lat <- convert_dmm_to_dd(as.numeric(data_upload$Lat))
     data_upload$lon <- convert_dmm_to_dd(as.numeric(data_upload$Lon))
+    
+    # Calculate DIN
+    data_upload$DIN <- calculate_DIN(data_upload$NO2, data_upload$NO3, data_upload$NH4)
+    
+    # Calculate oxygen saturation
+    data_upload$`O2Sat CTD (calc and prio-mix-max CTD)` <- calc_O2_saturation(
+      salinity_ctd = data_upload$`Salt CTD (prio CTD)`,
+      temperature_ctd = data_upload$`Temp CTD (prio CTD)`,
+      oxygen_ctd  = data_upload$`O2_CTD (prio CTD)`,
+      depth_m     = data_upload$Depth,
+      latitude    = data_upload$lat,
+      longitude   = data_upload$lon
+    )
+
+    # Round value
+    data_upload$`O2Sat CTD (calc and prio-mix-max CTD)` <- round(data_upload$`O2Sat CTD (calc and prio-mix-max CTD)`, 1)
     
     data_upload
   })
