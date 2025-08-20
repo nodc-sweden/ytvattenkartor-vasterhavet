@@ -24,4 +24,5 @@ Imports:
     SHARK4R,
     markdown,
     plotly,
-    gsw
+    gsw,
+    readxl

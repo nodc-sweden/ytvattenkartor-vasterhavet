@@ -28,6 +28,7 @@ library(DT)
 library(tidyr)
 library(markdown)
 library(gsw)
+library(readxl)
 
 # Load helper functions and data (these define functions like prepare_joined_data, create_plot, etc.)
 source(file.path("R", "helper.R"))
@@ -118,8 +119,8 @@ ui <- fluidPage(
                  numericInput("min_n", "Minsta antal mätningar för medelvärde:", value = 3, min = 1),
                  checkboxGroupInput("platform_filter", 
                                     label = HTML('Välj plattformskoder (<a href="https://smhi.se/oceanografi/oce_info_data/shark_web/downloads/codelist_SMHI.xlsx" target="_blank">se aktuell lista här</a>):'),
-                                    choices = platform_codes,
-                                    selected = platform_codes),
+                                    choices = setNames(shipc_codes$Code, shipc_codes$label),
+                                    selected = shipc_codes$Code),
                  textInput("platform_custom", "Ange andra plattformskoder (separerade med komma-tecken):",
                            placeholder = "t.ex. 77WX, 77K9"),
                  textInput("station_custom", 
