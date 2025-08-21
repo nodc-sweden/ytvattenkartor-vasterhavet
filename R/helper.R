@@ -72,7 +72,7 @@ get_depth_df_ref <- function(df_filtered, param) {
 }
 
 # Helper: join uploaded data with stats and add anomalies
-prepare_joined_data <- function(data, param, year, selected_month, stats_tidy, all_anomalies, only_flanks) {
+prepare_joined_data <- function(data, param, year, selected_month, stats_tidy, all_anomalies, only_flanks, use_quantiles) {
   # Filter year/month
   df_filtered <- data %>%
     filter(Year == year, `Month (calc)` == selected_month)
@@ -134,14 +134,25 @@ prepare_joined_data <- function(data, param, year, selected_month, stats_tidy, a
               by = c("Station" = "station", "Month" = "month", "depth" = "depth.y")) %>%
     mutate(
       value = .data[[param]],
-      anomaly_swe = case_when(
-        value < mean - `2std` ~ "Mycket lägre än normalt",
-        value >= mean - `2std` & value < mean - std ~ "Lägre än normalt",
-        value >= mean - std & value <= mean + std ~ "Normala värden",
-        value > mean + std & value <= mean + `2std` ~ "Högre än normalt",
-        value > mean + `2std` ~ "Mycket högre än normalt",
-        is.na(mean) ~ "Saknar referensvärde"
-      ),
+      anomaly_swe = if (use_quantiles) {
+        case_when(
+          value < q05 ~ "Mycket lägre än normalt",
+          value >= q05 & value < q25 ~ "Lägre än normalt",
+          value >= q25 & value <= q75 ~ "Normala värden",
+          value > q75 & value <= q95 ~ "Högre än normalt",
+          value > q95 ~ "Mycket högre än normalt",
+          TRUE ~ "Saknar referensvärde"
+        )
+      } else {
+        case_when(
+          value < mean - `2std` ~ "Mycket lägre än normalt",
+          value >= mean - `2std` & value < mean - std ~ "Lägre än normalt",
+          value >= mean - std & value <= mean + std ~ "Normala värden",
+          value > mean + std & value <= mean + `2std` ~ "Högre än normalt",
+          value > mean + `2std` ~ "Mycket högre än normalt",
+          is.na(mean) ~ "Saknar referensvärde"
+        )
+      },
       anomaly_swe = factor(anomaly_swe, levels = all_anomalies),
       extreme = factor(
         if (only_flanks) {
@@ -361,7 +372,11 @@ create_plot <- function(df, input, all_anomalies, anomaly_colors_swe, month_name
       plot.subtitle = element_text(size = 12)
     ) +
     labs(
-      fill = "Avvikelse från medelvärde",
+      fill = if (input$use_quantiles) {
+        "Avvikelse baserat på kvartiler"
+      } else {
+        "Avvikelse från medelvärde"
+      },
       title = paste0(
         parameter_map$parameter_name_plot[parameter_map$parameter_name == input$parameter], " (",
         parameter_map$parameter_unit[parameter_map$parameter_name == input$parameter], ")",
@@ -591,6 +606,11 @@ update_stats <- function(to_year, time_range, stats_list, station_names, paramet
       std   = ifelse(n > min_n, sd(value, na.rm = TRUE), NA_real_),
       `2std`= ifelse(n > min_n, 2 * sd(value, na.rm = TRUE), NA_real_),
       min   = ifelse(n > min_n, min(value, na.rm = TRUE), NA_real_),
+      q05   = ifelse(n > min_n, quantile(value, probs = 0.05, na.rm = TRUE, type = 7), NA_real_),
+      q25   = ifelse(n > min_n, quantile(value, probs = 0.25, na.rm = TRUE, type = 7), NA_real_),
+      median= ifelse(n > min_n, quantile(value, probs = 0.50, na.rm = TRUE, type = 7), NA_real_),
+      q75   = ifelse(n > min_n, quantile(value, probs = 0.75, na.rm = TRUE, type = 7), NA_real_),
+      q95   = ifelse(n > min_n, quantile(value, probs = 0.95, na.rm = TRUE, type = 7), NA_real_),
       max   = ifelse(n > min_n, max(value, na.rm = TRUE), NA_real_),
       .groups = "drop"
     ) %>%

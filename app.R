@@ -36,6 +36,18 @@ source(file.path("R", "load_data.R"))
 
 # Define UI for application
 ui <- fluidPage(
+
+  tags$head(
+    tags$style(HTML("
+    .form-check-label {
+      font-weight: normal !important;
+    }
+    .form-check-input:disabled + .form-check-label {
+      color: #6c757d; /* lighter gray for disabled look */
+    }
+  "))
+  ),
+  
   titlePanel("Ytvattenkartor för Infocentralen Västerhavet"),
   
   tabsetPanel(
@@ -52,7 +64,16 @@ ui <- fluidPage(
                    div(
                      style = "display: flex; gap: 10px; align-items: center; margin-left: 3px;",
                      tags$div(style = "margin: 0;", checkboxInput("add_shapes", "Ja", value = FALSE)),
-                     tags$div(style = "margin: 0;", checkboxInput("only_flanks", "Enbart vid 'Mycket högre/lägre än normalt'", value = FALSE))
+                     tags$div(style = "margin: 0;", checkboxInput("only_flanks", "Enbart vid 'Mycket högre/lägre än normalt'", value = FALSE))                   )
+                 ),
+                 div(
+                   tags$div(
+                     style = "font-weight: bold; margin-bottom: 4px; padding-left: 2px;",
+                     "Använd kvartiler istället för medelvärde"
+                   ),
+                   div(
+                     style = "display: flex; gap: 10px; align-items: center; margin-left: 3px;",
+                     tags$div(style = "margin: 0;", uiOutput("use_quantiles_ui"))
                    )
                  ),
                  uiOutput("year_ui"),
@@ -95,7 +116,6 @@ ui <- fluidPage(
                )
              )
     ),
-    
     tabPanel("Utforska referensdata",
              sidebarLayout(
                sidebarPanel(
@@ -104,7 +124,17 @@ ui <- fluidPage(
                  uiOutput("ref_param_ui"),
                  uiOutput("ref_dataset_ui"),
                  uiOutput("ref_station_ui"),
+                 div(
+                   tags$div(
+                     style = "font-weight: bold; margin-bottom: 4px; padding-left: 2px;",
+                     "Visa kvartiler istället för medelvärde"
+                   ),
+                   div(
+                     style = "display: flex; gap: 10px; align-items: center; margin-left: 3px;",
+                     tags$div(style = "margin: 0;", uiOutput("ref_use_quantiles_ui"))
+                   ),
                  width = 3
+               ),
                ),
                mainPanel(
                  plotlyOutput("ref_plot", height = "800px")
@@ -211,6 +241,62 @@ server <- function(input, output, session) {
       choices = names(stats_list()),
       selected = names(stats_list())[1]
     )
+  })
+  
+  output$use_quantiles_ui <- renderUI({
+    req(stats_list(), input$reference_data)
+    has_median <- "median" %in% names(stats_list()[[input$reference_data]])
+    
+    tags$div(
+      class = "form-check",
+      tags$input(
+        id = "use_quantiles",
+        type = "checkbox",
+        class = "form-check-input",
+        checked = if (has_median && isTRUE(input$use_quantiles)) "checked" else NULL,
+        disabled = if (!has_median) "disabled" else NULL
+      ),
+      tags$label(
+        `for` = "use_quantiles",
+        class = "form-check-label",
+        "Använd kvartiler"
+      )
+    )
+  })
+  
+  observe({
+    req(stats_list(), input$reference_data)
+    if (!("median" %in% names(stats_list()[[input$reference_data]]))) {
+      updateCheckboxInput(session, "use_quantiles", value = FALSE)
+    }
+  })
+  
+  output$ref_use_quantiles_ui <- renderUI({
+    req(stats_list(), input$ref_dataset)
+    has_median <- "median" %in% names(stats_list()[[input$ref_dataset]])
+    
+    tags$div(
+      class = "form-check",
+      tags$input(
+        id = "ref_use_quantiles",
+        type = "checkbox",
+        class = "form-check-input",
+        checked = if (has_median && isTRUE(input$ref_use_quantiles)) "checked" else NULL,
+        disabled = if (!has_median) "disabled" else NULL
+      ),
+      tags$label(
+        `for` = "ref_use_quantiles",
+        class = "form-check-label",
+        "Visa kvartiler"
+      )
+    )
+  })
+  
+  observe({
+    req(stats_list(), input$ref_dataset)
+    if (!("median" %in% names(stats_list()[[input$ref_dataset]]))) {
+      updateCheckboxInput(session, "ref_use_quantiles", value = FALSE)
+    }
   })
   
   output$ref_dataset_ui <- renderUI({
@@ -321,7 +407,7 @@ server <- function(input, output, session) {
   data_joined <- reactive({
     req(uploaded_data(), input$year, input$month, input$parameter)
     prepare_joined_data(uploaded_data(), input$parameter, input$year, input$month,
-                        selected_stats(), all_anomalies, input$only_flanks)
+                        selected_stats(), all_anomalies, input$only_flanks, input$use_quantiles)
   })
 
   # Define the reactive output for rendering the map plot
@@ -535,22 +621,61 @@ server <- function(input, output, session) {
       depth <- paste(unique(depth), collapse = "-")
       
       suppressWarnings({
-        # Build ggplot
-        p <- ggplot(df, aes(x = month)) +
-          geom_line(aes(y = mean, colour = "Mean", group = 1, text = hover_mean), size = 1) +
-          geom_point(aes(y = mean, colour = "Mean", text = hover_mean), alpha = 0) +
-          geom_ribbon(aes(ymin = mean - std, ymax = mean + std, fill = "±1 SD"), alpha = 0.2) +
-          geom_ribbon(aes(ymin = mean - `2std`, ymax = mean + `2std`, fill = "±2 SD"), alpha = 0.1) +
-          geom_point(aes(y = min, shape = "Min", text = hover_min), size = 3) +
-          geom_point(aes(y = max, shape = "Max", text = hover_max), size = 3) +
-          scale_shape_manual(values = c("Min" = 25, "Max" = 24)) +
-          labs(
-            title = paste0(input$ref_param, " (", input$ref_dataset, ")", ", ", depth, " m"),
-            x = "Månad",
-            y = paste0("Värde (", unique(df$parameter_unit), ")")
-          ) +
-          theme_minimal() +
-          theme(legend.position = "right")
+        if (isTRUE(input$ref_use_quantiles)) {
+          p <- ggplot(df, aes(x = month)) +
+            # Ribbons: larger (Q5-Q95) behind, IQR (Q25-Q75) in front
+            geom_ribbon(aes(ymin = q05, ymax = q95, fill = "Q5–Q95"), alpha = 0.10) +
+            geom_ribbon(aes(ymin = q25, ymax = q75, fill = "Q25–Q75"), alpha = 0.20) +
+            # Median line
+            geom_line(aes(y = median, colour = "Median", group = 1), size = 1) +
+            # Invisible-but-hoverable points on the median:
+            # use a very small alpha (not zero) so plotly recognizes the trace and shows hover
+            geom_point(
+              aes(y = median,
+                  colour = "Median",
+                  text = paste0(
+                    "Månad: ", str_to_sentence(month_names_sv)[month],
+                    "<br>Median: ", round(median, 2),
+                    "<br>Q5: ", round(q05, 2),
+                    "<br>Q25: ", round(q25, 2),
+                    "<br>Q75: ", round(q75, 2),
+                    "<br>Q95: ", round(q95, 2)
+                  )
+              ),
+              size = 3,
+              alpha = 0.02,      # tiny but non-zero -> hover works
+              stroke = 0
+            ) +
+            # Min and max as points (with hover)
+            geom_point(aes(y = min, shape = "Min", text = paste0("Månad: ", str_to_sentence(month_names_sv)[month], "<br>Min: ", round(min, 2))),
+                       size = 3) +
+            geom_point(aes(y = max, shape = "Max", text = paste0("Månad: ", str_to_sentence(month_names_sv)[month], "<br>Max: ", round(max, 2))),
+                       size = 3) +
+            scale_shape_manual(values = c("Min" = 25, "Max" = 24)) +
+            labs(
+              title = paste0(input$ref_param, " (", input$ref_dataset, ")", ", ", depth, " m"),
+              x = "Månad",
+              y = paste0("Värde (", unique(df$parameter_unit), ")")
+            ) +
+            theme_minimal() +
+            theme(legend.position = "right")
+        } else {
+          p <- ggplot(df, aes(x = month)) +
+            geom_line(aes(y = mean, colour = "Mean", group = 1, text = hover_mean), size = 1) +
+            geom_point(aes(y = mean, colour = "Mean", text = hover_mean), alpha = 0) +
+            geom_ribbon(aes(ymin = mean - std, ymax = mean + std, fill = "±1 SD"), alpha = 0.2) +
+            geom_ribbon(aes(ymin = mean - `2std`, ymax = mean + `2std`, fill = "±2 SD"), alpha = 0.1) +
+            geom_point(aes(y = min, shape = "Min", text = hover_min), size = 3) +
+            geom_point(aes(y = max, shape = "Max", text = hover_max), size = 3) +
+            scale_shape_manual(values = c("Min" = 25, "Max" = 24)) +
+            labs(
+              title = paste0(input$ref_param, " (", input$ref_dataset, ")", ", ", depth, " m"),
+              x = "Månad",
+              y = paste0("Värde (", unique(df$parameter_unit), ")")
+            ) +
+            theme_minimal() +
+            theme(legend.position = "right")
+        }
       })
       
       if (!is.null(input$data_file) && length(input$ref_year) > 0) {
@@ -586,10 +711,9 @@ server <- function(input, output, session) {
               alpha = 0.7
             ) +
             scale_colour_manual(
-              values = c("Mean" = "red", "Current value" = "green")
+              values = c("Mean" = "red", "Median" = "red", "Current value" = "green")
             )
         })
-        
       }
       
       # Convert to interactive plotly plot with custom tooltips
