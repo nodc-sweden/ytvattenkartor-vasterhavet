@@ -36,26 +36,14 @@ source(file.path("R", "load_data.R"))
 
 # Define UI for application
 ui <- fluidPage(
-
-  tags$head(
-    tags$style(HTML("
-    .form-check-label {
-      font-weight: normal !important;
-    }
-    .form-check-input:disabled + .form-check-label {
-      color: #6c757d; /* lighter gray for disabled look */
-    }
-  "))
-  ),
-  
   titlePanel("Ytvattenkartor för Infocentralen Västerhavet"),
-  
   tabsetPanel(
     tabPanel("Kartdiagram",
              sidebarLayout(
                sidebarPanel(
                  fileInput("data_file", "Ladda upp InfoC-export (.txt)", accept = ".txt", placeholder = "t.ex. BH_19_21_2025-05-27.txt"),
                  uiOutput("reference_data_ui"),
+                 uiOutput("use_quantiles_ui"),
                  div(
                    tags$div(
                      style = "font-weight: bold; margin-bottom: 4px; padding-left: 2px;",
@@ -65,16 +53,6 @@ ui <- fluidPage(
                      style = "display: flex; gap: 10px; align-items: center; margin-left: 3px;",
                      tags$div(style = "margin: 0;", checkboxInput("add_shapes", "Ja", value = FALSE)),
                      tags$div(style = "margin: 0;", checkboxInput("only_flanks", "Enbart vid 'Mycket högre/lägre än normalt'", value = FALSE))                   )
-                 ),
-                 div(
-                   tags$div(
-                     style = "font-weight: bold; margin-bottom: 4px; padding-left: 2px;",
-                     "Använd kvartiler istället för medelvärde"
-                   ),
-                   div(
-                     style = "display: flex; gap: 10px; align-items: center; margin-left: 3px;",
-                     tags$div(style = "margin: 0;", uiOutput("use_quantiles_ui"))
-                   )
                  ),
                  uiOutput("year_ui"),
                  selectInput("month", "Välj månad", choices = setNames(1:12, str_to_sentence(month_names_sv)), selected = 1),
@@ -124,17 +102,7 @@ ui <- fluidPage(
                  uiOutput("ref_param_ui"),
                  uiOutput("ref_dataset_ui"),
                  uiOutput("ref_station_ui"),
-                 div(
-                   tags$div(
-                     style = "font-weight: bold; margin-bottom: 4px; padding-left: 2px;",
-                     "Visa kvartiler istället för medelvärde"
-                   ),
-                   div(
-                     style = "display: flex; gap: 10px; align-items: center; margin-left: 3px;",
-                     tags$div(style = "margin: 0;", uiOutput("ref_use_quantiles_ui"))
-                   ),
-                 width = 3
-               ),
+                 uiOutput("ref_use_quantiles_ui")
                ),
                mainPanel(
                  plotlyOutput("ref_plot", height = "800px")
@@ -245,57 +213,71 @@ server <- function(input, output, session) {
   
   output$use_quantiles_ui <- renderUI({
     req(stats_list(), input$reference_data)
+    
     has_median <- "median" %in% names(stats_list()[[input$reference_data]])
     
-    tags$div(
-      class = "form-check",
-      tags$input(
-        id = "use_quantiles",
-        type = "checkbox",
-        class = "form-check-input",
-        checked = if (has_median && isTRUE(input$use_quantiles)) "checked" else NULL,
-        disabled = if (!has_median) "disabled" else NULL
-      ),
-      tags$label(
-        `for` = "use_quantiles",
-        class = "form-check-label",
-        "Använd kvartiler"
-      )
+    # Always include mean
+    choices <- c("Medelvärde" = "mean")
+    if (has_median) {
+      choices <- c(choices, "Kvantiler" = "quantiles")
+    }
+    
+    selectInput(
+      "use_quantiles",
+      "Jämförelsemetod",
+      choices = choices,
+      # Default is "mean", unless quantiles was previously selected
+      selected = if (!is.null(input$use_quantiles) && 
+                     input$use_quantiles %in% choices) {
+        input$use_quantiles
+      } else {
+        "mean"
+      }
     )
   })
   
   observe({
     req(stats_list(), input$reference_data)
-    if (!("median" %in% names(stats_list()[[input$reference_data]]))) {
-      updateCheckboxInput(session, "use_quantiles", value = FALSE)
+    has_median <- "median" %in% names(stats_list()[[input$reference_data]])
+    if (!has_median) {
+      # Force back to mean if quantiles shouldn't be available
+      updateSelectInput(session, "use_quantiles", selected = "mean")
     }
   })
   
   output$ref_use_quantiles_ui <- renderUI({
     req(stats_list(), input$ref_dataset)
+    
     has_median <- "median" %in% names(stats_list()[[input$ref_dataset]])
     
-    tags$div(
-      class = "form-check",
-      tags$input(
-        id = "ref_use_quantiles",
-        type = "checkbox",
-        class = "form-check-input",
-        checked = if (has_median && isTRUE(input$ref_use_quantiles)) "checked" else NULL,
-        disabled = if (!has_median) "disabled" else NULL
-      ),
-      tags$label(
-        `for` = "ref_use_quantiles",
-        class = "form-check-label",
-        "Visa kvartiler"
-      )
+    # Always include mean
+    choices <- c("Medelvärde" = "mean")
+    if (has_median) {
+      choices <- c(choices, "Kvantiler" = "quantiles")
+    }
+    
+    selectInput(
+      "ref_use_quantiles",
+      "Jämförelsemetod",
+      choices = choices,
+      # Default is "mean", unless quantiles was previously selected
+      selected = if (!is.null(input$ref_use_quantiles) && 
+                     input$ref_use_quantiles %in% choices) {
+        input$ref_use_quantiles
+      } else {
+        "mean"
+      }
     )
   })
   
   observe({
     req(stats_list(), input$ref_dataset)
-    if (!("median" %in% names(stats_list()[[input$ref_dataset]]))) {
-      updateCheckboxInput(session, "ref_use_quantiles", value = FALSE)
+    
+    has_median <- "median" %in% names(stats_list()[[input$ref_dataset]])
+    
+    if (!has_median) {
+      # Force back to mean if quantiles shouldn't be available
+      updateSelectInput(session, "ref_use_quantiles", selected = "mean")
     }
   })
   
@@ -345,7 +327,7 @@ server <- function(input, output, session) {
   selected_stats <- reactive({ 
     req(input$reference_data) 
     stats_list()[[input$reference_data]] 
-    })
+  })
   
   # Define a reactive expression to read and preprocess the uploaded data file
   uploaded_data <- reactive({
@@ -393,7 +375,7 @@ server <- function(input, output, session) {
       latitude    = data_upload$lat,
       longitude   = data_upload$lon
     )
-
+    
     # Round value
     data_upload$`O2Sat CTD (calc and prio-mix-max CTD)` <- round(data_upload$`O2Sat CTD (calc and prio-mix-max CTD)`, 1)
     
@@ -407,9 +389,9 @@ server <- function(input, output, session) {
   data_joined <- reactive({
     req(uploaded_data(), input$year, input$month, input$parameter)
     prepare_joined_data(uploaded_data(), input$parameter, input$year, input$month,
-                        selected_stats(), all_anomalies, input$only_flanks, input$use_quantiles)
+                        selected_stats(), all_anomalies, all_anomalies_quantiles, input$only_flanks, input$use_quantiles)
   })
-
+  
   # Define the reactive output for rendering the map plot
   output$map_plot <- renderPlot({
     df <- tryCatch({
@@ -423,7 +405,7 @@ server <- function(input, output, session) {
         annotate("text", x = 0.5, y = 0.5, label = "Ingen data tillgänglig för vald parameter, månad och år.", size = 6, hjust = 0.5) +
         theme_void()
     } else {
-      create_plot(df, input, all_anomalies, anomaly_colors_swe, month_names_sv, parameter_map)
+      create_plot(df, input, all_anomalies, all_anomalies_quantiles, anomaly_colors_swe, anomaly_colors_quantiles, month_names_sv, parameter_map)
     }
   }, res = 120)
   
@@ -436,7 +418,7 @@ server <- function(input, output, session) {
     },
     content = function(file) {
       df <- data_joined()
-      ggsave(file, plot = create_plot(df, input, all_anomalies, anomaly_colors_swe, month_names_sv, parameter_map), width = input$plot_width / 2.54, height = input$plot_height / 2.54, dpi = 300, bg = "white")
+      ggsave(file, plot = create_plot(df, input, all_anomalies, all_anomalies_quantiles, anomaly_colors_swe, anomaly_colors_quantiles, month_names_sv, parameter_map), width = input$plot_width / 2.54, height = input$plot_height / 2.54, dpi = 300, bg = "white")
     }
   )
   
@@ -466,10 +448,10 @@ server <- function(input, output, session) {
         
         # Generate and save the parameter plot using a helper function
         file_saved <- save_param_plot(
-          param, input$year, input$month, uploaded_data(), selected_stats(), all_anomalies,
-          anomaly_colors_swe, month_names_sv, parameter_map, input$bbox_option,
+          param, input$year, input$month, uploaded_data(), selected_stats(), all_anomalies, all_anomalies_quantiles,
+          anomaly_colors_swe, anomaly_colors_quantiles, month_names_sv, parameter_map, input$bbox_option,
           input$plot_width, input$plot_height, file_path, input$add_shapes, input$reference_data,
-          input$only_flanks
+          input$only_flanks, input$use_quantiles
         )
         
         # If a plot was successfully saved, add it to the files list
@@ -522,7 +504,9 @@ server <- function(input, output, session) {
           data = df_orig,
           stats_tidy = selected_stats(),
           all_anomalies = all_anomalies,
+          all_anomalies_quantiles = all_anomalies_quantiles,
           anomaly_colors_swe = anomaly_colors_swe,
+          anomaly_colors_quantiles = anomaly_colors_quantiles,
           month_names_sv = month_names_sv,
           parameter_map = parameter_map,
           bbox_option = input$bbox_option,
@@ -530,7 +514,8 @@ server <- function(input, output, session) {
           plot_height = input$plot_height,
           add_shapes = input$add_shapes,
           reference_data = input$reference_data,
-          only_flanks = input$only_flanks
+          only_flanks = input$only_flanks, 
+          use_quantiles = input$use_quantiles
         )
         
         if (!is.null(p)) plots[[length(plots) + 1]] <- p
@@ -621,7 +606,7 @@ server <- function(input, output, session) {
       depth <- paste(unique(depth), collapse = "-")
       
       suppressWarnings({
-        if (isTRUE(input$ref_use_quantiles)) {
+        if (isTRUE(input$ref_use_quantiles == "quantiles")) {
           p <- ggplot(df, aes(x = month)) +
             # Ribbons: larger (Q5-Q95) behind, IQR (Q25-Q75) in front
             geom_ribbon(aes(ymin = q05, ymax = q95, fill = "Q5–Q95"), alpha = 0.10) +
@@ -698,8 +683,8 @@ server <- function(input, output, session) {
           filter(Depth == depth) %>%
           dplyr::mutate(
             hover_value = paste0("Månad: ", str_to_sentence(month_names_sv)[month],
-                                "<br>Mätvärde: ", round(value, 2)
-          ))
+                                 "<br>Mätvärde: ", round(value, 2)
+            ))
         
         suppressWarnings({
           p <- p +

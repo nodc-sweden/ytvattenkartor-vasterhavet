@@ -38,6 +38,7 @@ include_logo_bvvf <- TRUE
 include_logo_lans <- TRUE
 add_shapes <- FALSE
 only_flanks <- FALSE
+use_quantiles <- "mean"                  # "mean", "quantiles"
 
 # Create output directory
 dir.create(plots_dir, showWarnings = FALSE, recursive = TRUE)
@@ -92,7 +93,9 @@ for (param in parameter_map$parameter_name) {
     data = data_upload,
     stats_tidy = stats_tidy,
     all_anomalies = all_anomalies,
-    anomaly_colors_swe = anomaly_colors_swe,
+    all_anomalies_quantiles = all_anomalies_quantiles,
+    anomaly_colors_swe = anomaly_colors_swe,,
+    anomaly_colors_quantiles = anomaly_colors_quantiles,
     month_names_sv = month_names_sv,
     parameter_map = parameter_map,
     bbox_option = bbox_option,
@@ -101,7 +104,8 @@ for (param in parameter_map$parameter_name) {
     out_path = file_path,
     add_shapes = add_shapes,
     reference_data = reference_data, 
-    only_flanks = only_flanks
+    only_flanks = only_flanks,
+    use_quantiles = 
   )
   
   if (!is.null(file_saved)) png_files <- c(png_files, file_saved)
@@ -139,7 +143,9 @@ for (param in parameter_map$parameter_name) {
     data = data_upload,
     stats_tidy = stats_tidy,
     all_anomalies = all_anomalies,
+    all_anomalies_quantiles = all_anomalies_quantiles,
     anomaly_colors_swe = anomaly_colors_swe,
+    anomaly_colors_quantiles = anomaly_colors_quantiles,
     month_names_sv = month_names_sv,
     parameter_map = parameter_map,
     bbox_option = bbox_option,
@@ -147,7 +153,8 @@ for (param in parameter_map$parameter_name) {
     plot_height = plot_height,
     add_shapes = add_shapes, 
     reference_data = reference_data,
-    only_flanks = only_flanks
+    only_flanks = only_flanks,
+    use_quantiles = use_quantiles
   )
   
   if (!is.null(p)) plots[[length(plots) + 1]] <- p

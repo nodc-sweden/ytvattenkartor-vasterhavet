@@ -43,21 +43,26 @@ parameter_map <- tibble::tibble(
   )
 )
 
-# Define all Swedish anomaly labels (used for categorizing measurement deviation)
-all_anomalies <- c(
-  "Mycket högre än normalt", "Högre än normalt", "Normala värden",
-  "Lägre än normalt", "Mycket lägre än normalt", "Saknar referensvärde"
-)
-
 # Define color codes for each anomaly level (used in maps and plots)
 anomaly_colors_swe <- c(
-  "Mycket högre än normalt" = "#440154FF",
-  "Högre än normalt" = "#3B528BFF",
-  "Normala värden" = "#35b779",
-  "Lägre än normalt" = "#b5de2b",
-  "Mycket lägre än normalt" = "#FDE725FF",
-  "Saknar referensvärde" = "white"
+  "Mycket högre än normalt" = "#440154FF", # Highest level
+  "Högre än normalt" = "#3B528BFF", # Medium-High level
+  "Normala värden" = "#35b779", # Normal values
+  "Lägre än normalt" = "#b5de2b", # Medium-Low level
+  "Mycket lägre än normalt" = "#FDE725FF", # Lowest level
+  "Saknar referensvärde" = "white" # Missing level
 )
+
+# Define all Swedish anomaly labels (used for categorizing measurement deviation)
+all_anomalies <- names(anomaly_colors_swe)
+
+# Define color codes for each anomaly level based on quantiles
+anomaly_colors_quantiles <- anomaly_colors_swe
+names(anomaly_colors_quantiles) <- paste0(names(anomaly_colors_quantiles), 
+                                          c(" (>Q95)", " (Q75-Q95)", " (Q25-Q75)", " (Q05-Q25)"," (<Q05)", ""))
+
+# Define all Swedish anomaly labels based on quantiles
+all_anomalies_quantiles <- names(anomaly_colors_quantiles)
 
 # Swedish month names (used for dropdowns, labels, etc.)
 month_names_sv <- c("januari", "februari", "mars", "april", "maj", "juni",

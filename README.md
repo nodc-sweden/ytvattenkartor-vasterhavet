@@ -12,7 +12,9 @@ This Shiny web application provides interactive mapping and visualization of sur
   - Geographic extent (Bohuslän, Halland, Bohuslän + Halland or dynamic based on available coordinates)
   - Plot size and aesthetics
 - Calculates DIN from NO₂, NO₃, and NH₄
-- Compares measurements to historical statistics (e.g., 2007-2016)
+- Compares measurements to historical statistics (e.g., 2007-2016), either by:
+  - Mean and standard deviation
+  - Percentiles (5th, 25th, 75th, 95th)
 - Uses values from specific depths:
   - **Surface values (0 m)** are used for all parameters except for **oxygen concentration**
   - **Bottom values** are used for **oxygen concentration** to capture deep-water conditions
@@ -27,11 +29,22 @@ This Shiny web application provides interactive mapping and visualization of sur
 
 To install the app on your local machine, clone [this repository](https://github.com/nodc-sweden/ytvattenkartor-vasterhavet) and install required R packages:
 
+### Option 1: Install packages manually
+
 ```r
 install.packages(c("shiny", "tidyverse", "sf", "R.matlab", "ggrepel", 
                    "png", "tiff", "jpeg", "grid", "gridExtra", "ggpubr", 
                    "plotly", "DT", "remotes", "markdown", "gsw"))
 remotes::install_github("sharksmhi/SHARK4R")  # Required for updating reference data
+```
+
+### Option 2: Use `renv` to install exact package versions
+
+If you want to reproduce the exact environment, use the provided renv.lock file:
+
+```r
+install.packages("renv")       # Install renv if not already installed
+renv::restore()                # Installs packages according to renv.lock
 ```
 
 ## 🚀 Running the App
