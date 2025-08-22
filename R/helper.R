@@ -7,6 +7,7 @@ library(ggplot2)
 library(readr)
 library(SHARK4R)
 library(tidyr)
+library(gsw)
 
 # Conversion function
 convert_dmm_to_dd <- function(dmm) {
@@ -71,7 +72,7 @@ get_depth_df_ref <- function(df_filtered, param) {
 }
 
 # Helper: join uploaded data with stats and add anomalies
-prepare_joined_data <- function(data, param, year, selected_month, stats_tidy, all_anomalies, only_flanks) {
+prepare_joined_data <- function(data, param, year, selected_month, stats_tidy, all_anomalies, all_anomalies_quantiles, only_flanks, use_quantiles) {
   # Filter year/month
   df_filtered <- data %>%
     filter(Year == year, `Month (calc)` == selected_month)
@@ -133,20 +134,34 @@ prepare_joined_data <- function(data, param, year, selected_month, stats_tidy, a
               by = c("Station" = "station", "Month" = "month", "depth" = "depth.y")) %>%
     mutate(
       value = .data[[param]],
-      anomaly_swe = case_when(
-        value < mean - `2std` ~ "Mycket lägre än normalt",
-        value >= mean - `2std` & value < mean - std ~ "Lägre än normalt",
-        value >= mean - std & value <= mean + std ~ "Normala värden",
-        value > mean + std & value <= mean + `2std` ~ "Högre än normalt",
-        value > mean + `2std` ~ "Mycket högre än normalt",
-        is.na(mean) ~ "Saknar referensvärde"
-      ),
-      anomaly_swe = factor(anomaly_swe, levels = all_anomalies),
+      anomaly_swe = if (use_quantiles == "quantiles") {
+        case_when(
+          value < q05 ~ all_anomalies_quantiles[5], # Mycket lägre än normalt (<q05)
+          value >= q05 & value < q25 ~ all_anomalies_quantiles[4], # Lägre än normalt (q05-q25)
+          value >= q25 & value <= q75 ~ all_anomalies_quantiles[3], # Normala värden (q25-q75)
+          value > q75 & value <= q95 ~ all_anomalies_quantiles[2], # Högre än normalt (q75-q95)
+          value > q95 ~ all_anomalies_quantiles[1], # Mycket högre än normalt (>q95)
+          TRUE ~ all_anomalies_quantiles[6] # Saknar referensvärde
+        )
+      } else {
+        case_when(
+          value < mean - `2std` ~ all_anomalies[5], # Mycket lägre än normalt
+          value >= mean - `2std` & value < mean - std ~ all_anomalies[4], # Lägre än normalt
+          value >= mean - std & value <= mean + std ~ all_anomalies[3], # Normala värden
+          value > mean + std & value <= mean + `2std` ~ all_anomalies[2], # Högre än normalt
+          value > mean + `2std` ~ all_anomalies[1], # Mycket högre än normalt
+          is.na(mean) ~ all_anomalies[6] # Saknar referensvärde
+        )
+      },
+      anomaly_swe = factor(anomaly_swe, 
+                           levels = if (use_quantiles == "quantiles") { all_anomalies_quantiles } else { all_anomalies }),
       extreme = factor(
         if (only_flanks) {
           case_when(
-            value < min & anomaly_swe == "Mycket lägre än normalt" ~ "Under minimum",
-            value > max & anomaly_swe == "Mycket högre än normalt" ~ "Över maximum",
+            value < min & anomaly_swe %in% c(all_anomalies[5],
+                                             all_anomalies_quantiles[5]) ~ "Under minimum",
+            value > max & anomaly_swe %in% c(all_anomalies[1],
+                                             all_anomalies_quantiles[1]) ~ "Över maximum",
             TRUE ~ "Inom normalspann"
           )
         } else {
@@ -167,11 +182,11 @@ prepare_joined_data <- function(data, param, year, selected_month, stats_tidy, a
 }
 
 # Helper: save plot for one parameter
-save_param_plot <- function(param, year, month, data, stats_tidy, all_anomalies,
-                            anomaly_colors_swe, month_names_sv, parameter_map,
+save_param_plot <- function(param, year, month, data, stats_tidy, all_anomalies, all_anomalies_quantiles,
+                            anomaly_colors_swe, anomaly_colors_quantiles, month_names_sv, parameter_map,
                             bbox_option, plot_width, plot_height, out_path, add_shapes,
-                            reference_data, only_flanks) {
-  joined <- prepare_joined_data(data, param, year, month, stats_tidy, all_anomalies, only_flanks)
+                            reference_data, only_flanks, use_quantiles) {
+  joined <- prepare_joined_data(data, param, year, month, stats_tidy, all_anomalies, all_anomalies_quantiles, only_flanks, use_quantiles)
   if (is.null(joined)) return(NULL)
   
   ggsave(
@@ -183,8 +198,9 @@ save_param_plot <- function(param, year, month, data, stats_tidy, all_anomalies,
       depth = NA,
       bbox_option = bbox_option,
       add_shapes = add_shapes,
-      reference_data = reference_data
-    ), all_anomalies, anomaly_colors_swe, month_names_sv, parameter_map),
+      reference_data = reference_data,
+      use_quantiles = use_quantiles
+    ), all_anomalies, all_anomalies_quantiles, anomaly_colors_swe, anomaly_colors_quantiles, month_names_sv, parameter_map),
     width = plot_width / 2.54,
     height = plot_height / 2.54,
     dpi = 300,
@@ -196,10 +212,10 @@ save_param_plot <- function(param, year, month, data, stats_tidy, all_anomalies,
 
 # Return a ggplot for a given parameter (or NULL if no data)
 create_plot_for_param <- function(param, year, month, data, stats_tidy,
-                                  all_anomalies, anomaly_colors_swe, month_names_sv, parameter_map,
+                                  all_anomalies, all_anomalies_quantiles, anomaly_colors_swe, anomaly_colors_quantiles, month_names_sv, parameter_map,
                                   bbox_option, plot_width, plot_height, add_shapes, reference_data,
-                                  only_flanks) {
-  joined <- prepare_joined_data(data, param, year, month, stats_tidy, all_anomalies, only_flanks)
+                                  only_flanks, use_quantiles) {
+  joined <- prepare_joined_data(data, param, year, month, stats_tidy, all_anomalies, all_anomalies_quantiles, only_flanks, use_quantiles)
   if (is.null(joined)) return(NULL)
   
   p <- create_plot(joined, list(
@@ -209,8 +225,9 @@ create_plot_for_param <- function(param, year, month, data, stats_tidy,
     depth = NA,
     bbox_option = bbox_option,
     add_shapes = add_shapes,
-    reference_data = reference_data
-  ), all_anomalies, anomaly_colors_swe, month_names_sv, parameter_map)
+    reference_data = reference_data,
+    use_quantiles = use_quantiles
+  ), all_anomalies, all_anomalies_quantiles, anomaly_colors_swe, anomaly_colors_quantiles, month_names_sv, parameter_map)
   
   # apply a small margin so page layout looks consistent in PDF
   p + theme(plot.margin = unit(rep(0.2, 4), "cm"))
@@ -268,7 +285,7 @@ create_logo_page <- function(include_smhi, include_bvvf, include_lans, month, ye
 }
 
 # Function to create a plot
-create_plot <- function(df, input, all_anomalies, anomaly_colors_swe, month_names_sv, parameter_map) {
+create_plot <- function(df, input, all_anomalies, all_anomalies_quantiles, anomaly_colors_swe, anomaly_colors_quantiles, month_names_sv, parameter_map) {
   # Load spatial data: Swedish west coast polygon and filtered lakes in Sweden
   sw_coast <- st_read("data/shapefiles/EEA_Coastline_Polygon_Shape_Swedish_west_coast/Swedish_West_Coast_WGS84.shp", quiet = TRUE)
   lakes <- st_read("data/shapefiles/ne_10m_lakes/sweden_lakes.shp", quiet = TRUE)
@@ -294,22 +311,59 @@ create_plot <- function(df, input, all_anomalies, anomaly_colors_swe, month_name
     bbox <- st_bbox(c(xmin = 11.98833, ymin = 56.56500, xmax = 12.72000, ymax = 57.40667), crs = st_crs(4326))
   }
   
-  # Add dummy entries for full legend rendering of anomalies
-  dummy_anomalies <- tibble::tibble(
-    lon = NA, lat = NA,
-    anomaly_swe = factor(setdiff(all_anomalies, unique(df$anomaly_swe)), levels = all_anomalies),
-    extreme = factor("Inom normalspann", levels = c("Över maximum", "Inom normalspann", "Under minimum")),
-    combined_label = NA
-  )
-  
-  # Add dummy entries for full legend rendering of extremes
-  dummy_extremes <- tibble::tibble(
-    lon = NA, lat = NA,
-    anomaly_swe = factor("Normala värden", levels = all_anomalies),
-    extreme = factor(c("Över maximum", "Inom normalspann", "Under minimum"),
-                     levels = c("Över maximum", "Inom normalspann", "Under minimum")),
-    combined_label = NA
-  )
+  # --- normalize anomaly_swe labels to match chosen color set ----
+  if (input$use_quantiles == "quantiles") {
+    # mapping from base labels -> suffixed labels (must be same length/order)
+    mapping <- setNames(all_anomalies_quantiles, all_anomalies)
+    
+    # ensure df$anomaly_swe is character, then map where possible
+    df <- df %>%
+      mutate(
+        anomaly_swe = as.character(anomaly_swe),
+        anomaly_swe = ifelse(anomaly_swe %in% names(mapping), mapping[anomaly_swe], anomaly_swe),
+        # finally set factor with the full set of suffixed levels
+        anomaly_swe = factor(anomaly_swe, levels = all_anomalies_quantiles)
+      )
+    
+    # create dummies using the *suffixed* labels
+    missing <- setdiff(all_anomalies_quantiles, as.character(unique(df$anomaly_swe)))
+    dummy_anomalies <- tibble::tibble(
+      lon = NA_real_, lat = NA_real_,
+      anomaly_swe = factor(missing, levels = all_anomalies_quantiles),
+      extreme = factor("Inom normalspann", levels = c("Över maximum", "Inom normalspann", "Under minimum")),
+      combined_label = NA_character_
+    )
+    
+    dummy_extremes <- tibble::tibble(
+      lon = NA_real_, lat = NA_real_,
+      # use the suffixed "Normala värden (q25-q75)" to match levels
+      anomaly_swe = factor(all_anomalies_quantiles[3], levels = all_anomalies_quantiles),
+      extreme = factor(c("Över maximum", "Inom normalspann", "Under minimum"),
+                       levels = c("Över maximum", "Inom normalspann", "Under minimum")),
+      combined_label = NA_character_
+    )
+    
+  } else {
+    # Mean-based branch: keep original (unsuffixed) labels and levels
+    df <- df %>%
+      mutate(anomaly_swe = factor(as.character(anomaly_swe), levels = all_anomalies))
+    
+    missing <- setdiff(all_anomalies, as.character(unique(df$anomaly_swe)))
+    dummy_anomalies <- tibble::tibble(
+      lon = NA_real_, lat = NA_real_,
+      anomaly_swe = factor(missing, levels = all_anomalies),
+      extreme = factor("Inom normalspann", levels = c("Över maximum", "Inom normalspann", "Under minimum")),
+      combined_label = NA_character_
+    )
+    
+    dummy_extremes <- tibble::tibble(
+      lon = NA_real_, lat = NA_real_,
+      anomaly_swe = factor(all_anomalies[3], levels = all_anomalies),
+      extreme = factor(c("Över maximum", "Inom normalspann", "Under minimum"),
+                       levels = c("Över maximum", "Inom normalspann", "Under minimum")),
+      combined_label = NA_character_
+    )
+  }
   
   # Combine real data with dummy points to ensure complete legends
   plot_df <- bind_rows(df, if(nrow(dummy_anomalies) > 0) dummy_anomalies, if(nrow(dummy_extremes) > 0) dummy_extremes)
@@ -340,7 +394,8 @@ create_plot <- function(df, input, all_anomalies, anomaly_colors_swe, month_name
   }
   
   # Add labels and customize the plot
-  p <- p + scale_fill_manual(values = anomaly_colors_swe) +
+  p <- p + scale_fill_manual(values = if (input$use_quantiles == "quantiles") anomaly_colors_quantiles else anomaly_colors_swe,
+                             na.value = "white") +
     ggrepel::geom_text_repel(
       data = filter(plot_df, !is.na(combined_label)),
       aes(x = lon, y = lat, label = combined_label),
@@ -360,7 +415,11 @@ create_plot <- function(df, input, all_anomalies, anomaly_colors_swe, month_name
       plot.subtitle = element_text(size = 12)
     ) +
     labs(
-      fill = "Avvikelse från medelvärde",
+      fill = if (input$use_quantiles == "quantiles") {
+        "Relativ avvikelse (kvantiler)"
+      } else {
+        "Avvikelse från medelvärde"
+      },
       title = paste0(
         parameter_map$parameter_name_plot[parameter_map$parameter_name == input$parameter], " (",
         parameter_map$parameter_unit[parameter_map$parameter_name == input$parameter], ")",
@@ -413,6 +472,74 @@ calculate_DIN <- function(NO2, NO3, NH4) {
   return(DIN)
 }
 
+# Function to calculate O2 saturation (%) with CTD prioritized, bottle fallback
+calc_O2_saturation <- function(salinity_ctd = NULL, salinity_bottle = NULL,
+                               temperature_ctd = NULL, temperature_bottle = NULL,
+                               oxygen_ctd = NULL, oxygen_bottle = NULL,
+                               depth_m, latitude = 58, longitude = 12) {
+  
+  # --- Salinity ---
+  if (!is.null(salinity_ctd) && !is.null(salinity_bottle)) {
+    salinity <- ifelse(!is.na(salinity_ctd), salinity_ctd, salinity_bottle)
+  } else if (!is.null(salinity_ctd)) {
+    salinity <- salinity_ctd
+  } else if (!is.null(salinity_bottle)) {
+    salinity <- salinity_bottle
+  } else {
+    stop("You must supply at least one of salinity_ctd or salinity_bottle")
+  }
+  
+  # --- Temperature ---
+  if (!is.null(temperature_ctd) && !is.null(temperature_bottle)) {
+    temperature <- ifelse(!is.na(temperature_ctd), temperature_ctd, temperature_bottle)
+  } else if (!is.null(temperature_ctd)) {
+    temperature <- temperature_ctd
+  } else if (!is.null(temperature_bottle)) {
+    temperature <- temperature_bottle
+  } else {
+    stop("You must supply at least one of temperature_ctd or temperature_bottle")
+  }
+  
+  # --- Oxygen ---
+  if (!is.null(oxygen_ctd) && !is.null(oxygen_bottle)) {
+    oxygen_mlL <- ifelse(!is.na(oxygen_ctd), oxygen_ctd, oxygen_bottle)
+  } else if (!is.null(oxygen_ctd)) {
+    oxygen_mlL <- oxygen_ctd
+  } else if (!is.null(oxygen_bottle)) {
+    oxygen_mlL <- oxygen_bottle
+  } else {
+    stop("You must supply at least one of oxygen_ctd or oxygen_bottle")
+  }
+  
+  # --- Calculations ---
+  # Convert depth -> pressure (dbar)
+  p <- gsw_p_from_z(z = -depth_m, latitude = latitude)
+  
+  # Absolute salinity
+  SA <- gsw_SA_from_SP(SP = salinity, p = p,
+                       longitude = longitude, latitude = latitude)
+  
+  # In-situ density (kg/m^3)
+  rho <- gsw_rho(SA = SA, CT = temperature, p = p)
+  
+  # Convert DO from mL/L -> µmol/L
+  O2_umolL <- oxygen_mlL * 44.661
+  
+  # Convert µmol/L -> µmol/kg
+  O2_umolkg <- O2_umolL / (rho / 1000)
+  
+  # Potential temperature relative to 0 dbar
+  pt <- gsw_pt_from_CT(SA = SA, CT = temperature)
+  
+  # Oxygen solubility (µmol/kg) at SP, pt
+  O2_sol <- gsw_O2sol_SP_pt(SP = salinity, pt = pt)
+  
+  # Oxygen saturation (%)
+  O2_saturation <- (O2_umolkg / O2_sol) * 100
+  
+  return(O2_saturation)
+}
+
 update_stats <- function(to_year, time_range, stats_list, station_names, parameter_map, min_n, platform_filter) {
   # Calculate start and end years based on inputs
   start_year <- to_year - time_range + 1
@@ -425,6 +552,19 @@ update_stats <- function(to_year, time_range, stats_list, station_names, paramet
                                dataTypes = "Physical and Chemical",
                                stationName = station_names,
                                verbose = FALSE)
+  
+  # Calculate oxygen saturation (%)
+  shark_data$O2_saturation <- calc_O2_saturation(
+    salinity_ctd = shark_data$`Salinity CTD (o/oo psu)`,
+    salinity_bottle = shark_data$`Salinity bottle (o/oo psu)`,
+    temperature_ctd = shark_data$`Temperature CTD (C)`,
+    temperature_bottle = shark_data$`Temperature bottle (C)`,
+    oxygen_ctd  = shark_data$`Dissolved oxygen O2 CTD (ml/l)`,
+    oxygen_bottle = shark_data$`Dissolved oxygen O2 bottle (ml/l)`,
+    depth_m     = shark_data$sample_depth_m,
+    latitude    = shark_data$sample_latitude_dd,
+    longitude   = shark_data$sample_longitude_dd
+  )
   
   # Rename specific stations for consistency with plotting/statistical datasets
   shark_data$station_name[shark_data$station_name == "KOSTERFJORDEN NR16"] <- "KOSTERFJORDEN (NR16)"
@@ -451,10 +591,6 @@ update_stats <- function(to_year, time_range, stats_list, station_names, paramet
     shark_data$`Nitrate NO3-N (umol/l)`,
     shark_data$`Ammonium NH4-N (umol/l)`
   )
-  
-  # Remove syremättnad for now as it does not exist in SHARK
-  parameter_map <- parameter_map %>%
-    filter(!parameter_name_short == "Syremättnad")
   
   # Standard depths
   standard_depth <- c(
@@ -513,6 +649,11 @@ update_stats <- function(to_year, time_range, stats_list, station_names, paramet
       std   = ifelse(n > min_n, sd(value, na.rm = TRUE), NA_real_),
       `2std`= ifelse(n > min_n, 2 * sd(value, na.rm = TRUE), NA_real_),
       min   = ifelse(n > min_n, min(value, na.rm = TRUE), NA_real_),
+      q05   = ifelse(n > min_n, quantile(value, probs = 0.05, na.rm = TRUE, type = 7), NA_real_),
+      q25   = ifelse(n > min_n, quantile(value, probs = 0.25, na.rm = TRUE, type = 7), NA_real_),
+      median= ifelse(n > min_n, quantile(value, probs = 0.50, na.rm = TRUE, type = 7), NA_real_),
+      q75   = ifelse(n > min_n, quantile(value, probs = 0.75, na.rm = TRUE, type = 7), NA_real_),
+      q95   = ifelse(n > min_n, quantile(value, probs = 0.95, na.rm = TRUE, type = 7), NA_real_),
       max   = ifelse(n > min_n, max(value, na.rm = TRUE), NA_real_),
       .groups = "drop"
     ) %>%
