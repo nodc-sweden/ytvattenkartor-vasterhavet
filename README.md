@@ -1,3 +1,5 @@
+[![Shiny Deploy](https://github.com/nodc-sweden/ytvattenkartor-vasterhavet/actions/workflows/shinyapps.yaml/badge.svg?branch=main&event=push)](https://nodc-sweden.shinyapps.io/ytvattenkartor/)
+
 # Surface water maps for the Västerhavet Info Centre
 
 This Shiny web application provides interactive mapping and visualization of surface water anomalies in the Västerhavet region, based on data exported for the Västerhavet Info Centre using the `SHARKtoolbox`. The app allows users to upload data, select parameters, and generate customized maps based on historical statistics.
