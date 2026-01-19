@@ -67,7 +67,7 @@ ui <- fluidPage(
                  ),
                  selectInput("bbox_option", "Välj kartutbredning", choices = c(
                    "Bohuslän", "Halland", "Bohuslän och Halland", "Dynamisk"
-                 ), selected = "Bohuslän och Halland"),
+                 ), selected = "Halland"),
                  numericInput("plot_width", "Plotbredd, nedladdning (cm)", value = 15, min = 10, max = 100, step = 1),
                  numericInput("plot_height", "Plothöjd, nedladdning (cm)", value = 20, min = 10, max = 100, step = 1),
                  downloadButton("download_current_png", "Ladda ner aktuell plot (PNG)"),
@@ -82,7 +82,7 @@ ui <- fluidPage(
                    div(
                      style = "display: flex; gap: 10px; align-items: center; margin-left: 3px;",
                      tags$div(style = "margin: 0;", checkboxInput("include_logo_smhi", "SMHI", value = TRUE)),
-                     tags$div(style = "margin: 0;", checkboxInput("include_logo_bvvf", "BVVF", value = TRUE)),
+                     tags$div(style = "margin: 0;", checkboxInput("include_logo_bvvf", "BVVF", value = FALSE)),
                      tags$div(style = "margin: 0;", checkboxInput("include_logo_lans", "NLST", value = TRUE))
                    )
                  ),
