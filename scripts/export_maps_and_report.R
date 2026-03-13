@@ -48,6 +48,7 @@ data_upload <- read_tsv(
   data_file,
   locale = locale(encoding = "ISO-8859-1"),
   col_types = cols(),
+  na = c("", "NA", "NaN"),
   progress = FALSE,
   name_repair = "unique_quiet"
 )

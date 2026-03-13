@@ -1,7 +1,7 @@
 Package: ytvattenkartor-vasterhavet
 Type: Application
 Title: Ytvattenkartor Västerhavet App
-Version: 1.0.1
+Version: 1.0.2
 Imports:
     shiny,
     dplyr,

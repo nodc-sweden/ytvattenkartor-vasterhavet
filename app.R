@@ -334,8 +334,8 @@ server <- function(input, output, session) {
     # Ensure a file has been uploaded before proceeding (halts reactivity if not)
     req(input$data_file)
     
-    data_upload <- read_tsv(input$data_file$datapath, locale = locale(encoding = "ISO-8859-1"), col_types = cols(), 
-                            progress = FALSE, name_repair = "unique_quiet")
+    data_upload <- read_tsv(input$data_file$datapath, locale = locale(encoding = "ISO-8859-1"), col_types = cols(),
+                            na = c("", "NA", "NaN"), progress = FALSE, name_repair = "unique_quiet")
     
     # Check for garbled characters in Station names
     bad_stations <- unique(data_upload$Station[has_garbled_utf8(data_upload$Station)])
