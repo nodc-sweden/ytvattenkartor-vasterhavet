@@ -44,11 +44,10 @@ use_quantiles <- "mean"                  # "mean", "quantiles"
 dir.create(plots_dir, showWarnings = FALSE, recursive = TRUE)
 
 # ==== LOAD AND PREPARE DATA ====
-raw_lines <- read_lines(data_file, locale = locale(encoding = "ISO-8859-1"))
-raw_lines <- gsub("N13 VE:", "N13 VE\t", raw_lines, fixed = FALSE)
 data_upload <- read_tsv(
-  I(raw_lines),
-  col_types = cols(Depth2 = col_double(), PH = col_double()),
+  data_file,
+  locale = locale(encoding = "ISO-8859-1"),
+  col_types = cols(),
   na = c("", "NA", "NaN"),
   progress = FALSE,
   name_repair = "unique_quiet"
